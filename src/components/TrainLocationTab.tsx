@@ -382,6 +382,8 @@ export const TrainLocationTab: React.FC<TrainLocationTabProps> = () => {
             title: `【列車遅延発生】${lineName}`,
             body: notificationMsg,
             tag: `delay-${train.id}`,
+          }).catch((err) => {
+            console.warn('Notification send ignored:', err);
           });
 
           // 2. アプリ内トースト通知バナー表示

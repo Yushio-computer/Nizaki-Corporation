@@ -8,6 +8,8 @@ interface EquipTabProps {
   cart?: { [key: string]: number };
   onUpdateCart?: (cart: { [key: string]: number }) => void;
   activeOrder?: ActiveOrder | null;
+  isLoggedIn?: boolean;
+  onRequireLogin?: (reason: string, onLoggedIn?: () => void) => void;
 }
 
 export const EquipTab: React.FC<EquipTabProps> = ({
@@ -16,6 +18,8 @@ export const EquipTab: React.FC<EquipTabProps> = ({
   cart: externalCart,
   onUpdateCart,
   activeOrder,
+  isLoggedIn = false,
+  onRequireLogin,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'bento' | 'drink' | 'dessert' | 'souvenir'>('all');
   const [internalCart, setInternalCart] = useState<{ [key: string]: number }>({});
@@ -260,10 +264,16 @@ export const EquipTab: React.FC<EquipTabProps> = ({
             </div>
 
             <button
-              onClick={() => onOpenBookingModal(cart)}
+              onClick={() => {
+                if (!isLoggedIn && onRequireLogin) {
+                  onRequireLogin('車内デリバリーのご注文確定には、神埼IDログインが必要です。', () => onOpenBookingModal(cart));
+                  return;
+                }
+                onOpenBookingModal(cart);
+              }}
               className="bg-[#5B21B6] hover:bg-[#4C1D95] text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0"
             >
-              <span>購入確定へ進む</span>
+              <span>{isLoggedIn ? '購入確定へ進む' : 'ログインして注文'}</span>
             </button>
           </div>
         </div>

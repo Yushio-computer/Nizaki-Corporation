@@ -62,7 +62,11 @@ export function getNotificationPermissionState(): NotificationPermission | 'unsu
   if (!isNotificationSupported()) {
     return 'unsupported';
   }
-  return Notification.permission;
+  try {
+    return Notification.permission;
+  } catch {
+    return 'unsupported';
+  }
 }
 
 /**
@@ -77,11 +81,18 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
     // Ensure service worker is registered first
     await registerServiceWorker();
 
-    const permission = await Notification.requestPermission();
-    return permission;
-  } catch (error) {
-    console.error('Error requesting notification permission:', error);
+    if (typeof Notification.requestPermission === 'function') {
+      const permission = await Notification.requestPermission();
+      return permission;
+    }
     return Notification.permission;
+  } catch (error) {
+    console.warn('Error requesting notification permission:', error);
+    try {
+      return Notification.permission;
+    } catch {
+      return 'unsupported';
+    }
   }
 }
 
@@ -90,65 +101,83 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
  */
 export async function sendLocalPushNotification(payload: NotificationPayload): Promise<boolean> {
   if (!isNotificationSupported()) {
-    if (isIOSBrowser() && !isStandaloneMode()) {
-      alert(
-        '【iOSで通知を受け取る方法】\n' +
-        'iOS (iPhone) では、Safariの「共有ボタン（↑）」をタップして「ホーム画面に追加」を行ってからアプリを起動すると、Web Push通知をご利用いただけます。'
-      );
-    } else {
-      alert('お使いのブラウザはWeb Push通知に対応していません。Google ChromeやEdgeなどでお試しください。');
-    }
     return false;
   }
 
-  let currentPermission: NotificationPermission | 'unsupported' = Notification.permission;
+  let currentPermission: NotificationPermission | 'unsupported' = 'unsupported';
+  try {
+    currentPermission = Notification.permission;
+  } catch {
+    return false;
+  }
 
   if (currentPermission === 'default') {
     currentPermission = await requestNotificationPermission();
   }
 
   if (currentPermission !== 'granted') {
-    alert('ブラウザの通知許可が拒否（Block）されています。ブラウザの設定から通知を許可してください。');
     return false;
   }
 
+  // 1. Primary Method: Service Worker Registration showNotification (supported on desktop & mobile Chrome/Android)
   try {
-    // Attempt Service Worker registration notification first
-    if (!swRegistration) {
-      swRegistration = await registerServiceWorker();
-    }
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      if (!swRegistration) {
+        swRegistration = await registerServiceWorker();
+      }
 
-    if (swRegistration && swRegistration.active) {
-      await swRegistration.showNotification(payload.title, {
-        body: payload.body,
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
-        tag: payload.tag || 'kanzaki-railway',
-        data: { url: payload.url || '/' },
-        vibrate: [200, 100, 200],
-      } as NotificationOptions);
-      return true;
-    }
+      // Check active registration or await ready state
+      let activeReg = swRegistration && swRegistration.active ? swRegistration : null;
+      if (!activeReg) {
+        try {
+          activeReg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), 800)),
+          ]);
+        } catch {
+          activeReg = null;
+        }
+      }
 
-    // Fallback to standard Notification API
-    new Notification(payload.title, {
-      body: payload.body,
-      icon: '/favicon.ico',
-      tag: payload.tag || 'kanzaki-railway',
-    });
-    return true;
-  } catch (error) {
-    console.error('Failed to trigger notification:', error);
-    // Fallback attempt
-    try {
-      new Notification(payload.title, {
-        body: payload.body,
-        icon: '/favicon.ico',
-      });
-      return true;
-    } catch (fallbackError) {
-      console.error('Fallback notification failed:', fallbackError);
-      return false;
+      if (activeReg && typeof activeReg.showNotification === 'function') {
+        await activeReg.showNotification(payload.title, {
+          body: payload.body,
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: payload.tag || 'kanzaki-railway',
+          data: { url: payload.url || '/' },
+          vibrate: [200, 100, 200],
+        } as NotificationOptions);
+        return true;
+      }
     }
+  } catch (swError) {
+    console.warn('Service Worker notification failed, attempting desktop fallback:', swError);
   }
+
+  // 2. Fallback Method: Standard Desktop Notification constructor (guarded against Android Chrome / iframe Illegal constructor)
+  try {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const NotificationCtor = window.Notification;
+      if (typeof NotificationCtor === 'function') {
+        try {
+          new NotificationCtor(payload.title, {
+            body: payload.body,
+            icon: '/favicon.ico',
+            tag: payload.tag || 'kanzaki-railway',
+          });
+          return true;
+        } catch (ctorError) {
+          // In Android Chrome, iOS WebViews, and sandboxed iframes, new Notification throws TypeError: Illegal constructor
+          console.warn('Notification constructor unsupported or prohibited in this context:', ctorError);
+          return false;
+        }
+      }
+    }
+  } catch (fallbackError) {
+    console.warn('Notification dispatch fallback was suppressed:', fallbackError);
+    return false;
+  }
+
+  return false;
 }

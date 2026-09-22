@@ -1,12 +1,13 @@
 import React from 'react';
 import { X, Award, CreditCard, Sparkles } from 'lucide-react';
-import { PointHistoryItem } from '../types';
+import { PointHistoryItem, UserProfile } from '../types';
 
 interface NPointModalProps {
   isOpen: boolean;
   onClose: () => void;
   balance: number;
   pointHistory?: PointHistoryItem[];
+  currentUser?: UserProfile | null;
 }
 
 export const NPointModal: React.FC<NPointModalProps> = ({
@@ -14,6 +15,7 @@ export const NPointModal: React.FC<NPointModalProps> = ({
   onClose,
   balance,
   pointHistory = [],
+  currentUser = null,
 }) => {
   if (!isOpen) return null;
 
@@ -55,7 +57,7 @@ export const NPointModal: React.FC<NPointModalProps> = ({
                 </span>
               </div>
               <span className="text-[10px] tracking-widest font-mono font-semibold text-[#E2D5B7] bg-[#E2D5B7]/10 px-2.5 py-0.5 rounded-full border border-[#E2D5B7]/25">
-                GOLD MEMBER
+                {(currentUser?.rank || 'GOLD').toUpperCase()} MEMBER
               </span>
             </div>
 
@@ -83,7 +85,7 @@ export const NPointModal: React.FC<NPointModalProps> = ({
                 <div className="w-1.5 h-12 bg-slate-950" />
               </div>
               <div className="text-xs font-mono font-bold text-slate-800 mt-2 tracking-widest">
-                9920 1250 8831 4092
+                {currentUser?.memberId ? `${currentUser.memberId} ・ 4092` : '9920 1250 8831 4092'}
               </div>
             </div>
 
@@ -97,8 +99,12 @@ export const NPointModal: React.FC<NPointModalProps> = ({
               </div>
 
               <div className="text-right">
-                <div className="text-[9px] text-slate-400 font-mono">神埼ID 連携済</div>
-                <div className="text-[9px] text-slate-400 font-mono mt-0.5">有効期限: 2027.12</div>
+                <div className="text-[9px] text-slate-400 font-mono">
+                  {currentUser ? `神埼ID: ${currentUser.memberId}` : '神埼ID 連携済'}
+                </div>
+                <div className="text-[9px] text-slate-400 font-mono mt-0.5 truncate max-w-[140px]">
+                  {currentUser?.email || '有効期限: 2027.12'}
+                </div>
               </div>
             </div>
           </div>

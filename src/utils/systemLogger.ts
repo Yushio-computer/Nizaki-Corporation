@@ -56,7 +56,8 @@ function isBenignOrTestNoise(msg: string): boolean {
     lower.includes('[vite] connect error') ||
     lower.includes('[管理者テスト]') ||
     lower.includes('診断用エラーが発生しました') ||
-    lower.includes('テストエラー')
+    lower.includes('テストエラー') ||
+    lower.includes('illegal constructor')
   );
 }
 
@@ -375,11 +376,15 @@ export const systemLogger = {
 
     let notificationPermission = 'unsupported';
     if (typeof window !== 'undefined' && 'Notification' in window) {
-      notificationPermission = Notification.permission;
+      try {
+        notificationPermission = Notification.permission;
+      } catch {
+        notificationPermission = 'unsupported';
+      }
     }
 
     return {
-      appVersion: 'v3.10.0',
+      appVersion: 'v3.28.2',
       environment: process.env.NODE_ENV === 'production' ? 'Production' : 'Development',
       userAgent: ua,
       deviceType,

@@ -9,6 +9,8 @@ interface EDeliveryModalProps {
   onConfirmOrder: (order: ActiveOrder) => void;
   initialCart?: { [key: string]: number };
   activeOrder?: ActiveOrder | null;
+  isLoggedIn?: boolean;
+  onRequireLogin?: (reason: string, onLoggedIn?: () => void) => void;
 }
 
 const getRandomSeat = () => {
@@ -24,6 +26,8 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
   onConfirmOrder,
   initialCart,
   activeOrder,
+  isLoggedIn = false,
+  onRequireLogin,
 }) => {
   const [selectedTrain, setSelectedTrain] = useState('特急めぐり 8号 (14:43発 松戸駅)');
   const [carNo, setCarNo] = useState(1);
@@ -98,6 +102,11 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedItems.length === 0 || isStandardSeat || hasNoOrder) return;
+
+    if (!isLoggedIn && onRequireLogin) {
+      onRequireLogin('車内デリバリーのご注文確定には、神埼IDログインが必要です。');
+      return;
+    }
 
     const newOrder: ActiveOrder = {
       orderId: `NZ-DELIV-${Math.floor(1000 + Math.random() * 9000)}`,

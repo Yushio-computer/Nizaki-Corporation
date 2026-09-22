@@ -22,7 +22,10 @@ import {
   Wrench,
   Bug,
   ShieldAlert,
+  LogOut,
+  ChevronRight,
 } from 'lucide-react';
+import { UserAvatar } from './UserAvatar';
 import { MyStationRegisterCard, RegisterableStation } from './MyStationRegisterCard';
 import { AdminConsoleModal } from './AdminConsoleModal';
 import {
@@ -34,7 +37,7 @@ import {
   isStandaloneMode,
 } from '../utils/pushNotification';
 
-import { ActiveOrder } from '../types';
+import { ActiveOrder, UserProfile } from '../types';
 
 interface SettingsTabProps {
   nPointBalance: number;
@@ -42,6 +45,11 @@ interface SettingsTabProps {
   onUpdateRegisteredStations: (stations: RegisterableStation[]) => void;
   onOpenNPointModal: () => void;
   activeOrder?: ActiveOrder | null;
+  isLoggedIn?: boolean;
+  currentUser?: UserProfile | null;
+  onLoginClick?: () => void;
+  onLogout?: () => void;
+  onOpenMyPage?: () => void;
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({
@@ -50,6 +58,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onUpdateRegisteredStations,
   onOpenNPointModal,
   activeOrder,
+  isLoggedIn = false,
+  currentUser = null,
+  onLoginClick,
+  onLogout,
+  onOpenMyPage,
 }) => {
   // 1. Payment
   const [smartPayMethod, setSmartPayMethod] = useState<'card' | 'ic' | 'qr'>('card');
@@ -87,6 +100,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           title: '神埼線アプリ Web Push通知',
           body: '実端末へのプッシュ通知連携が有効化されました！運行遅延や車内注文の通知が届きます。',
           tag: 'kanzaki-welcome',
+        }).catch((err) => {
+          console.warn('Push notification error:', err);
         });
         setLastSentTime(new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       }
@@ -102,6 +117,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         title: '神埼線アプリ 通知許可完了',
         body: '端末への通知送信テストに成功しました！',
         tag: 'kanzaki-permission',
+      }).catch((err) => {
+        console.warn('Push notification error:', err);
       });
       setLastSentTime(new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     }
@@ -142,7 +159,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       tag = 'kanzaki-express-alert';
     }
 
-    sendLocalPushNotification({ title, body, tag });
+    sendLocalPushNotification({ title, body, tag }).catch((err) => {
+      console.warn('Test push notification error:', err);
+    });
     setLastSentTime(new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
   };
 
@@ -219,25 +238,95 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         </div>
 
         <div className="bg-white rounded-2xl p-4 border border-[#E6E2EE] shadow-xs space-y-3.5">
-          {/* 会員証 & ポイント */}
-          <div className="flex items-center justify-between gap-2 pb-3 border-b border-[#F0EEF6]">
-            <div className="flex items-center gap-2">
-              <Award className="w-4 h-4 text-[#5B21B6] shrink-0" />
-              <div>
-                <span className="text-xs font-bold text-[#221C35]">N-POINT 会員</span>
-                <span className="ml-2 text-[10px] bg-[#EFE8FA] text-[#5B21B6] font-bold px-2 py-0.5 rounded-full border border-[#DDD6FE]">
-                  ゴールド
-                </span>
+          {/* 神埼ID ログインステータス */}
+          {isLoggedIn && currentUser ? (
+            <div className="bg-[#F8F7FC] rounded-xl p-3 border border-[#EDE9FE] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 shadow-2xs ring-2 ring-[#708BD6]/40">
+                  <UserAvatar className="w-full h-full" />
+                </div>
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="text-xs font-bold text-[#221C35] truncate">{currentUser.name} 様</span>
+                    <span className="text-[10px] bg-[#5B21B6] text-white font-bold px-1.5 py-0.2 rounded font-mono">
+                      {currentUser.rank}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-[#6B6380] font-mono truncate">
+                    ID: {currentUser.memberId} ・ {currentUser.email}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {onOpenMyPage && (
+                  <button
+                    type="button"
+                    onClick={onOpenMyPage}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#5B21B6] hover:bg-[#4C1D95] text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                    title="マイページ（利用履歴・各種設定）"
+                  >
+                    <span>マイページ</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="px-2 py-1.5 rounded-lg border border-[#E5E2EE] hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-[#857D99] text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                  title="ログアウト"
+                >
+                  <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                  <span className="hidden sm:inline">ログアウト</span>
+                </button>
               </div>
             </div>
-            <button
-              onClick={onOpenNPointModal}
-              className="px-3 py-1.5 rounded-xl bg-[#5B21B6] hover:bg-[#4C1D95] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
-            >
-              <QrCode className="w-3.5 h-3.5" />
-              <span>デジタル会員証</span>
-            </button>
-          </div>
+          ) : (
+            <div className="bg-amber-50/60 rounded-xl p-3 border border-amber-200/80 flex items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <div className="text-xs font-bold text-amber-900 flex items-center gap-1">
+                  <User className="w-3.5 h-3.5 text-amber-700" />
+                  <span>神埼ID 未ログイン（ゲスト）</span>
+                </div>
+                <div className="text-[10px] text-amber-800">
+                  特急券予約・車内デリバリー・イベントの利用に必須
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onLoginClick}
+                className="px-3 py-1.5 rounded-xl bg-[#5B21B6] hover:bg-[#4C1D95] text-white text-xs font-bold shadow-xs transition-all cursor-pointer shrink-0"
+              >
+                ログイン
+              </button>
+            </div>
+          )}
+
+          {/* 会員証 & ポイント - ログインしている時のみ表示 */}
+          {isLoggedIn && (
+            <div className="flex items-center justify-between gap-2 pb-3 border-b border-[#F0EEF6]">
+              <div className="flex items-center gap-2">
+                <Award className="w-4 h-4 text-[#5B21B6] shrink-0" />
+                <div>
+                  <span className="text-xs font-bold text-[#221C35]">N-POINT 会員</span>
+                  <span className="ml-1.5 text-xs font-mono font-bold text-[#5B21B6]">
+                    ({nPointBalance.toLocaleString()} pt)
+                  </span>
+                  <span className="ml-2 text-[10px] bg-[#EFE8FA] text-[#5B21B6] font-bold px-2 py-0.5 rounded-full border border-[#DDD6FE]">
+                    {currentUser?.rank || 'ゴールド'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenNPointModal}
+                className="px-3 py-1.5 rounded-xl bg-[#5B21B6] hover:bg-[#4C1D95] text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>デジタル会員証</span>
+              </button>
+            </div>
+          )}
 
           {/* Smart Pay 設定 */}
           <div>
@@ -517,7 +606,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           className="text-[10px] font-medium text-[#6B6380] hover:text-[#5B21B6] transition-colors cursor-pointer"
           title="管理者コンソールを開く"
         >
-          神埼鉄道 NIIZAKI App v3.15.3
+          神埼鉄道 NIIZAKI App v3.28.2
         </button>
         <p className="text-[9px] text-[#857D99]">© Nizaki Electric Railway Co., Ltd.</p>
       </div>

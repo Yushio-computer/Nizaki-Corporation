@@ -1,6 +1,7 @@
 import React from 'react';
 import { QrCode } from 'lucide-react';
-import { TabType } from '../types';
+import { TabType, UserProfile } from '../types';
+import { UserAvatar } from './UserAvatar';
 
 interface HeaderProps {
   nPointBalance?: number;
@@ -8,16 +9,24 @@ interface HeaderProps {
   onOpenQRCodeModal?: () => void;
   onOpenRouteMapModal?: () => void;
   onOpenNotificationModal?: () => void;
+  onOpenMyPage?: () => void;
   activeTab?: TabType;
   onChangeTab?: (tab: TabType) => void;
   currentStationName?: string;
   currentPlatform?: 1 | 2;
+  isLoggedIn?: boolean;
+  currentUser?: UserProfile | null;
+  onOpenLoginModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   nPointBalance = 0,
   onOpenNPointModal,
   onOpenQRCodeModal,
+  onOpenMyPage,
+  isLoggedIn = false,
+  currentUser = null,
+  onOpenLoginModal,
 }) => {
   return (
     <header className="bg-white border-b border-[#E6E2EE] text-[#221C35] sticky top-0 z-40 shadow-xs transition-all">
@@ -64,15 +73,43 @@ export const Header: React.FC<HeaderProps> = ({
             </h1>
           </div>
 
-          {/* Right: QR Code Icon Button triggers N-POINT Modal */}
-          <div className="flex items-center shrink-0">
-            <button
-              onClick={onOpenNPointModal}
-              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 transition-all cursor-pointer border border-gray-200 flex items-center justify-center gap-1.5"
-              title="N-POINTを表示"
-            >
-              <QrCode className="w-5 h-5 text-[#5B21B6]" />
-            </button>
+          {/* Right: Round User Avatar Icon & QR Code */}
+          <div className="flex items-center gap-2 shrink-0">
+            {isLoggedIn && currentUser ? (
+              <button
+                type="button"
+                onClick={onOpenMyPage}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-[#708BD6]/50 hover:ring-[#5B21B6] transition-all cursor-pointer relative shrink-0 shadow-2xs hover:scale-105 active:scale-95 flex items-center justify-center p-0 overflow-hidden"
+                title={`${currentUser.name} さんのマイページ（利用履歴・アカウント設定）`}
+              >
+                <UserAvatar className="w-full h-full" />
+                <span className="sr-only">マイページ</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onOpenLoginModal}
+                className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl bg-[#221C35] hover:bg-[#3B1F68] text-white transition-all cursor-pointer shadow-xs flex items-center gap-1.5 text-xs font-bold"
+                title="神埼IDログイン"
+              >
+                <div className="w-4 h-4 rounded-full overflow-hidden shrink-0">
+                  <UserAvatar className="w-full h-full" />
+                </div>
+                <span>ログイン</span>
+              </button>
+            )}
+
+            {/* QR Code Icon Button triggers N-POINT Modal - ログイン時のみ表示 */}
+            {isLoggedIn && (
+              <button
+                type="button"
+                onClick={onOpenNPointModal}
+                className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 transition-all cursor-pointer border border-gray-200 flex items-center justify-center gap-1.5 h-8 sm:h-9 w-8 sm:w-9"
+                title="N-POINTを表示"
+              >
+                <QrCode className="w-4 h-4 text-[#5B21B6]" />
+              </button>
+            )}
           </div>
         </div>
       </div>

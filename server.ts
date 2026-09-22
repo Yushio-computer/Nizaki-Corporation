@@ -126,23 +126,9 @@ function getLiveTrainStatus() {
   };
 }
 
-// 予約データストレージ（メモリ内マップ + デフォルト予約）
-const ordersMap: Record<string, any> = {
-  "EQ-84920": {
-    orderId: "EQ-84920",
-    trainName: "特急あやみ 101号",
-    carNo: 4,
-    seatNo: "12A",
-    seatType: "standard",
-    boardingStation: "松戸駅",
-    destinationStation: "日立駅",
-    departureTime: "09:00",
-    arrivalTime: "09:48",
-    totalPrice: 1900,
-    status: "confirmed",
-  },
-};
-let latestOrderId = "EQ-84920";
+// 予約データストレージ（メモリ内マップ）
+const ordersMap: Record<string, any> = {};
+let latestOrderId = "";
 
 // 1. 運行状態公開API (/api/status)
 app.get("/api/status", (req, res) => {

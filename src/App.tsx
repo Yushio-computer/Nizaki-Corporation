@@ -16,44 +16,108 @@ import { EDeliveryModal } from './components/EDeliveryModal';
 import { NPointModal } from './components/NPointModal';
 import { RouteMapModal } from './components/RouteMapModal';
 import { QRCodeModal } from './components/QRCodeModal';
+import { LoginModal } from './components/LoginModal';
+import { MyPageModal } from './components/MyPageModal';
 import { MOCK_LINES, MOCK_STATIONS, MOCK_EQUIP_ITEMS, MOCK_LIVE_TRAINS } from './data/mockData';
-import { TabType, Station, ActiveOrder, DepartureInfo, EquipItem, PointHistoryItem } from './types';
+import { TabType, Station, ActiveOrder, DepartureInfo, EquipItem, PointHistoryItem, UserProfile } from './types';
+
+// Helper to sanitize email for storage key
+const getPointStoragePrefix = (email?: string | null) => {
+  if (!email) return null;
+  const sanitized = email.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '_');
+  return `kanzaki_npoint_${sanitized}`;
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [currentStation, setCurrentStation] = useState<Station>(MOCK_STATIONS[0]); // 松戸駅
   const [headerStationName, setHeaderStationName] = useState<string>('松戸');
   const [headerPlatform, setHeaderPlatform] = useState<1 | 2>(1);
-  const [nPointBalance, setNPointBalance] = useState<number>(() => {
+
+  // Authentication state
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     try {
-      const saved = localStorage.getItem('kanzaki_npoint_balance');
-      if (saved !== null) {
-        return parseInt(saved, 10);
-      }
-    } catch (e) {}
-    return 0;
+      const saved = localStorage.getItem('kanzaki_current_user');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to parse saved user:', e);
+    }
+    return null;
   });
 
-  const [pointHistory, setPointHistory] = useState<PointHistoryItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('kanzaki_npoint_history');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {}
-    return [];
-  });
+  const isLoggedIn = currentUser !== null;
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginReason, setLoginReason] = useState<string | undefined>(undefined);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
-  // Sync points and history to localStorage
+  // N-POINT is strictly bound to currentUser's email address
+  const [nPointBalance, setNPointBalance] = useState<number>(0);
+  const [pointHistory, setPointHistory] = useState<PointHistoryItem[]>([]);
+
+  // Load user-specific points and history whenever currentUser email changes
   React.useEffect(() => {
+    if (!currentUser || !currentUser.email) {
+      setNPointBalance(0);
+      setPointHistory([]);
+      return;
+    }
+
+    const prefix = getPointStoragePrefix(currentUser.email);
+    if (!prefix) return;
+
     try {
-      localStorage.setItem('kanzaki_npoint_balance', nPointBalance.toString());
-      localStorage.setItem('kanzaki_npoint_history', JSON.stringify(pointHistory));
-    } catch (e) {}
-  }, [nPointBalance, pointHistory]);
+      const savedBalance = localStorage.getItem(`${prefix}_balance`);
+      const savedHistory = localStorage.getItem(`${prefix}_history`);
+
+      if (savedBalance !== null) {
+        setNPointBalance(parseInt(savedBalance, 10));
+      } else {
+        // 新規アカウント向け初期ウェルカムボーナス (500pt)
+        const initialPoints = 500;
+        setNPointBalance(initialPoints);
+        localStorage.setItem(`${prefix}_balance`, initialPoints.toString());
+      }
+
+      if (savedHistory !== null) {
+        setPointHistory(JSON.parse(savedHistory));
+      } else {
+        const welcomeHistory: PointHistoryItem[] = [
+          {
+            id: `pt_init_${Date.now()}`,
+            title: '神埼ID 新規登録ウェルカムボーナス',
+            date: new Date().toLocaleString('ja-JP', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            points: 500,
+            type: 'coupon',
+          },
+        ];
+        setPointHistory(welcomeHistory);
+        localStorage.setItem(`${prefix}_history`, JSON.stringify(welcomeHistory));
+      }
+    } catch (e) {
+      console.warn('Failed to load points for user:', e);
+    }
+  }, [currentUser?.email]);
 
   const addPoints = (points: number, title?: string, type: 'reservation' | 'stamp' | 'coupon' | 'equip' = 'reservation') => {
-    setNPointBalance((prev) => prev + points);
+    if (!currentUser || !currentUser.email) return;
+    const prefix = getPointStoragePrefix(currentUser.email);
+
+    setNPointBalance((prev) => {
+      const newBal = prev + points;
+      if (prefix) {
+        try {
+          localStorage.setItem(`${prefix}_balance`, newBal.toString());
+        } catch {}
+      }
+      return newBal;
+    });
+
     const nowStr = new Date().toLocaleString('ja-JP', {
       year: 'numeric',
       month: '2-digit',
@@ -68,33 +132,71 @@ export default function App() {
       points,
       type,
     };
-    setPointHistory((prev) => [newHistoryItem, ...prev].slice(0, 30));
+
+    setPointHistory((prev) => {
+      const newHist = [newHistoryItem, ...prev].slice(0, 30);
+      if (prefix) {
+        try {
+          localStorage.setItem(`${prefix}_history`, JSON.stringify(newHist));
+        } catch {}
+      }
+      return newHist;
+    });
   };
+
+  const handleRequireLogin = (reason: string, onLoggedIn?: () => void) => {
+    setLoginReason(reason);
+    if (onLoggedIn) {
+      setPendingAction(() => onLoggedIn);
+    } else {
+      setPendingAction(null);
+    }
+    setIsLoginModalOpen(true);
+  };
+
+  const handleLogin = (user: UserProfile) => {
+    setCurrentUser(user);
+    try {
+      localStorage.setItem('kanzaki_current_user', JSON.stringify(user));
+    } catch (e) {
+      console.warn('Failed to save user in storage:', e);
+    }
+    if (pendingAction) {
+      const action = pendingAction;
+      setPendingAction(null);
+      setTimeout(() => {
+        action();
+      }, 100);
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setNPointBalance(0);
+    setPointHistory([]);
+    try {
+      localStorage.removeItem('kanzaki_current_user');
+    } catch (e) {
+      console.warn('Failed to remove user from storage:', e);
+    }
+  };
+
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(() => {
     try {
       const saved = localStorage.getItem('kanzaki_active_order');
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // 開発時の初期モックデータ（EQ-84920）が自動保存されていた場合は破棄して未予約状態にする
+        if (parsed?.orderId === 'EQ-84920') {
+          localStorage.removeItem('kanzaki_active_order');
+          return null;
+        }
+        return parsed;
       }
     } catch (e) {
       console.warn('Failed to parse saved active order:', e);
     }
-    return {
-      orderId: 'EQ-84920',
-      trainName: '特急あやみ 101号',
-      carNo: 4,
-      seatNo: '12A',
-      seatType: 'standard',
-      boardingStation: '松戸駅',
-      destinationStation: '日立駅',
-      departureTime: '09:00',
-      arrivalTime: '09:48',
-      items: [],
-      totalPrice: 1900,
-      status: 'confirmed',
-      estimatedDeliveryTime: '松戸駅発車後 5分頃',
-      deliveryStation: '松戸駅',
-    };
+    return null;
   });
 
   // Registered My Stations state (Max 3, Default: Tokyo)
@@ -107,6 +209,7 @@ export default function App() {
   const [isNPointModalOpen, setIsNPointModalOpen] = useState(false);
   const [isRouteMapModalOpen, setIsRouteMapModalOpen] = useState(false);
   const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false);
+  const [isMyPageOpen, setIsMyPageOpen] = useState(false);
   const [selectedCart, setSelectedCart] = useState<{ [key: string]: number }>({});
 
   // 予約状態が更新されたらローカルストレージとサーバー（/api/reservation）に同期
@@ -210,10 +313,19 @@ export default function App() {
         nPointBalance={nPointBalance}
         onOpenNPointModal={() => setIsNPointModalOpen(true)}
         onOpenRouteMapModal={() => setIsRouteMapModalOpen(true)}
+        onOpenQRCodeModal={() => setIsQRCodeModalOpen(true)}
+        onOpenMyPage={() => setIsMyPageOpen(true)}
         activeTab={activeTab}
         onChangeTab={setActiveTab}
         currentStationName={headerStationName}
         currentPlatform={headerPlatform}
+        isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
+        onOpenLoginModal={() => {
+          setLoginReason('神埼IDでログインまたは新規会員登録を行います。');
+          setPendingAction(null);
+          setIsLoginModalOpen(true);
+        }}
       />
 
       {/* Main Responsive View Container */}
@@ -239,7 +351,15 @@ export default function App() {
             {/* 3. Bottom Single Button: Brand Deep Purple Delivery Order Button */}
             <div className="pt-2">
               <button
-                onClick={() => setIsEDeliveryModalOpen(true)}
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    handleRequireLogin('車内デリバリーのご利用には、神埼IDログインが必要です。', () => {
+                      setIsEDeliveryModalOpen(true);
+                    });
+                    return;
+                  }
+                  setIsEDeliveryModalOpen(true);
+                }}
                 className="w-full py-3.5 px-6 rounded-xl bg-[#5B21B6] hover:bg-[#4C1D95] text-white font-bold text-sm shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ShoppingBag className="w-4 h-4 text-white" />
@@ -270,6 +390,8 @@ export default function App() {
               onOpenEDeliveryModal={() => setIsEDeliveryModalOpen(true)}
               onConfirmOrder={handleConfirmOrder}
               onCancelOrder={handleCancelOrder}
+              isLoggedIn={isLoggedIn}
+              onRequireLogin={handleRequireLogin}
             />
           </div>
         )}
@@ -282,6 +404,8 @@ export default function App() {
               cart={selectedCart}
               onUpdateCart={setSelectedCart}
               activeOrder={activeOrder}
+              isLoggedIn={isLoggedIn}
+              onRequireLogin={handleRequireLogin}
               onOpenBookingModal={(initialCart) => {
                 if (initialCart) setSelectedCart(initialCart);
                 setIsEDeliveryModalOpen(true);
@@ -293,25 +417,11 @@ export default function App() {
         {/* Tab 5: イベント */}
         {activeTab === 'events' && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-28 md:pb-12">
-            {/* 準備中オーバーレイ（解除時はこのブロックを false にするか削除するだけです） */}
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-purple-50 text-[#5B21B6] flex items-center justify-center">
-                <Calendar className="w-8 h-8" />
-              </div>
-              <div className="space-y-2 max-w-sm">
-                <h3 className="text-xl font-black text-[#221C35]">イベント準備中</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">
-                  現在、新しいイベントを企画・準備しております。公開まで今しばらくお待ちください。
-                </p>
-              </div>
-            </div>
-
-            {/* 既存のEventsTabコードは触らずそのまま保持（非表示中） */}
-            <div className="hidden">
-              <EventsTab
-                onAddNPoints={(points, title, type) => addPoints(points, title, type || 'stamp')}
-              />
-            </div>
+            <EventsTab
+              onAddNPoints={(points, title, type) => addPoints(points, title, type || 'stamp')}
+              isLoggedIn={isLoggedIn}
+              onRequireLogin={handleRequireLogin}
+            />
           </div>
         )}
 
@@ -324,6 +434,15 @@ export default function App() {
               onUpdateRegisteredStations={setRegisteredStations}
               onOpenNPointModal={() => setIsNPointModalOpen(true)}
               activeOrder={activeOrder}
+              isLoggedIn={isLoggedIn}
+              currentUser={currentUser}
+              onLoginClick={() => {
+                setLoginReason('神埼IDでログインまたは新規会員登録を行います。');
+                setPendingAction(null);
+                setIsLoginModalOpen(true);
+              }}
+              onLogout={handleLogout}
+              onOpenMyPage={() => setIsMyPageOpen(true)}
             />
           </div>
         )}
@@ -344,6 +463,36 @@ export default function App() {
         onConfirmOrder={handleConfirmOrder}
         initialCart={selectedCart}
         activeOrder={activeOrder}
+        isLoggedIn={isLoggedIn}
+        onRequireLogin={handleRequireLogin}
+      />
+
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => {
+          setIsLoginModalOpen(false);
+          setPendingAction(null);
+        }}
+        onLogin={handleLogin}
+        reason={loginReason}
+      />
+
+      <MyPageModal
+        isOpen={isMyPageOpen}
+        onClose={() => setIsMyPageOpen(false)}
+        currentUser={currentUser}
+        balance={nPointBalance}
+        pointHistory={pointHistory}
+        activeOrder={activeOrder}
+        onLogout={handleLogout}
+        onOpenNPointModal={() => {
+          setIsMyPageOpen(false);
+          setIsNPointModalOpen(true);
+        }}
+        onOpenQRCodeModal={() => {
+          setIsMyPageOpen(false);
+          setIsQRCodeModalOpen(true);
+        }}
       />
 
       <NPointModal
@@ -351,6 +500,7 @@ export default function App() {
         onClose={() => setIsNPointModalOpen(false)}
         balance={nPointBalance}
         pointHistory={pointHistory}
+        currentUser={currentUser}
       />
 
       <RouteMapModal

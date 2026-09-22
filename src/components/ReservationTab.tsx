@@ -30,6 +30,8 @@ interface ReservationTabProps {
   onOpenEDeliveryModal: () => void;
   onConfirmOrder: (order: ActiveOrder) => void;
   onCancelOrder: () => void;
+  isLoggedIn?: boolean;
+  onRequireLogin?: (reason: string, onLoggedIn?: () => void) => void;
 }
 
 export const ReservationTab: React.FC<ReservationTabProps> = ({
@@ -37,6 +39,8 @@ export const ReservationTab: React.FC<ReservationTabProps> = ({
   onOpenEDeliveryModal,
   onConfirmOrder,
   onCancelOrder,
+  isLoggedIn = false,
+  onRequireLogin,
 }) => {
   const [copiedCode, setCopiedCode] = useState(false);
   // Express Train Selection in E-Quick Service
@@ -440,6 +444,21 @@ export const ReservationTab: React.FC<ReservationTabProps> = ({
   // Open Seat Selection Modal or Direct Booking for Unreserved Seat
   const handleBookingClick = () => {
     if (isCurrentTrainEnded || isAllTrainsEnded) {
+      return;
+    }
+    if (!isLoggedIn && onRequireLogin) {
+      onRequireLogin('特急券の予約・座席指定を確定するには、神埼IDログインが必要です。', () => {
+        if (seatType === 'standard') {
+          handleConfirmSeatSelection({
+            carNo: 6,
+            seatNo: '自由席',
+            isSpecialCar: false,
+            specialCarFee: 0,
+          });
+        } else {
+          setIsSeatSelectionModalOpen(true);
+        }
+      });
       return;
     }
     // 自由席は座席選択モーダルを開かずにそのまま予約（6号車 自由席）
@@ -1032,6 +1051,22 @@ export const ReservationTab: React.FC<ReservationTabProps> = ({
             {isCurrentTrainEnded && (
               <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 text-xs text-center font-bold">
                 発車5分前を過ぎたため予約できません
+              </div>
+            )}
+
+            {!isLoggedIn && (
+              <div className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>特急券の予約・購入には神埼IDログインが必要です</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onRequireLogin?.('特急券の予約・座席指定を確定するには、神埼IDログインが必要です。')}
+                  className="text-[#5B21B6] font-bold hover:underline cursor-pointer shrink-0 text-[11px]"
+                >
+                  ログイン
+                </button>
               </div>
             )}
 

@@ -118,3 +118,24 @@ export interface PointHistoryItem {
   type: 'reservation' | 'stamp' | 'coupon' | 'equip';
 }
 
+export interface UserProfile {
+  memberId: string;
+  name: string;
+  email: string;
+  rank: 'レギュラー' | 'ゴールド' | 'プレミアム';
+  joinDate: string;
+}
+
+export interface AccountActivityItem {
+  id: string;
+  category: 'ticket' | 'delivery' | 'event' | 'point';
+  title: string;
+  subtitle: string;
+  date: string;
+  status: string;
+  statusColor?: string;
+  amount?: string;
+  pointsEarned?: number;
+  details?: Record<string, string>;
+}
+
