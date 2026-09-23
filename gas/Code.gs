@@ -52,6 +52,17 @@ function doPost(e) {
       return createJsonResponse({ status: 'success', saved: saved });
     }
 
+    // ①.5 神埼ID 会員認証まわり（新規登録の認証コード送信／本登録／ログイン）
+    if (json.action === 'sendVerificationCode') {
+      return handleSendVerificationCode(json.email);
+    }
+    if (json.action === 'verifyAndRegister') {
+      return handleVerifyAndRegister(json.email, json.code, json.password, json.name);
+    }
+    if (json.action === 'login') {
+      return handleLogin(json.email, json.password);
+    }
+
     // ② LINE Messaging APIからのWebhookイベント
     if (json.events && Array.isArray(json.events)) {
       for (let i = 0; i < json.events.length; i++) {
@@ -310,6 +321,141 @@ function saveOrderToSheet(order) {
     Logger.log('予約台帳保存エラー: ' + err.toString());
     return false;
   }
+}
+
+// シート名定義（会員台帳）
+const SHEET_MEMBERS = '会員台帳';
+
+/**
+ * ① 認証コード送信（新規登録ステップ1）
+ */
+function handleSendVerificationCode(email) {
+  email = (email || '').trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return createJsonResponse({ status: 'error', message: 'メールアドレスの形式が正しくありません。' });
+  }
+
+  if (findMemberByEmail(email)) {
+    return createJsonResponse({ status: 'error', message: 'このメールアドレスは既に登録されています。ログインをお試しください。' });
+  }
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  CacheService.getScriptCache().put('otp_' + email, code, 600); // 10分間有効
+
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: '【神埼鉄道】神埼ID 新規登録 認証コード',
+      body:
+        '神埼鉄道グループをご利用いただきありがとうございます。\n\n' +
+        '以下の認証コードをアプリの画面に入力し、登録を完了してください。\n\n' +
+        '認証コード: ' + code + '\n\n' +
+        '※このコードの有効期限は発行から10分間です。\n' +
+        '※本メールに心当たりがない場合は、破棄してください。'
+    });
+  } catch (err) {
+    Logger.log('認証コードメール送信エラー: ' + err.toString());
+    return createJsonResponse({ status: 'error', message: 'メール送信に失敗しました。時間をおいて再度お試しください。' });
+  }
+
+  return createJsonResponse({ status: 'success', message: '認証コードを送信しました。' });
+}
+
+/**
+ * ② コード検証＋本登録（新規登録ステップ2）
+ */
+function handleVerifyAndRegister(email, code, password, name) {
+  email = (email || '').trim().toLowerCase();
+  const cache = CacheService.getScriptCache();
+  const cachedCode = cache.get('otp_' + email);
+
+  if (!cachedCode || String(code).trim() !== cachedCode) {
+    return createJsonResponse({ status: 'error', message: '認証コードが正しくないか、有効期限が切れています。' });
+  }
+
+  if (findMemberByEmail(email)) {
+    return createJsonResponse({ status: 'error', message: 'このメールアドレスは既に登録されています。' });
+  }
+
+  const salt = Utilities.getUuid();
+  const passwordHash = hashPassword(password, salt);
+  const memberId = 'KZ-' + Math.floor(10000 + Math.random() * 90000);
+  const joinDate = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.create('神埼鉄道_業務データ');
+  let sheet = ss.getSheetByName(SHEET_MEMBERS);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_MEMBERS);
+    sheet.appendRow(['登録日時', 'メールアドレス', '会員ID', '表示名', 'パスワードソルト', 'パスワードハッシュ', 'ランク', '入会日']);
+    sheet.getRange('A1:H1').setBackground('#5B21B6').setFontColor('#FFFFFF').setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+
+  const timestamp = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
+  sheet.appendRow([timestamp, email, memberId, name || email.split('@')[0], salt, passwordHash, 'レギュラー', joinDate]);
+
+  cache.remove('otp_' + email);
+
+  return createJsonResponse({
+    status: 'success',
+    user: { memberId: memberId, name: name || email.split('@')[0], email: email, rank: 'レギュラー', joinDate: joinDate }
+  });
+}
+
+/**
+ * ③ ログイン
+ */
+function handleLogin(email, password) {
+  email = (email || '').trim().toLowerCase();
+  const member = findMemberByEmail(email);
+
+  if (!member) {
+    return createJsonResponse({ status: 'error', message: 'メールアドレスまたはパスワードが正しくありません。' });
+  }
+
+  const inputHash = hashPassword(password, member.salt);
+  if (inputHash !== member.passwordHash) {
+    return createJsonResponse({ status: 'error', message: 'メールアドレスまたはパスワードが正しくありません。' });
+  }
+
+  return createJsonResponse({
+    status: 'success',
+    user: { memberId: member.memberId, name: member.name, email: member.email, rank: member.rank, joinDate: member.joinDate }
+  });
+}
+
+function findMemberByEmail(email) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss ? ss.getSheetByName(SHEET_MEMBERS) : null;
+  if (!sheet) return null;
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return null;
+  const headers = data[0];
+  const emailIdx = headers.indexOf('メールアドレス');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][emailIdx]).trim().toLowerCase() === email) {
+      return {
+        memberId: data[i][headers.indexOf('会員ID')],
+        name: data[i][headers.indexOf('表示名')],
+        email: data[i][emailIdx],
+        salt: data[i][headers.indexOf('パスワードソルト')],
+        passwordHash: data[i][headers.indexOf('パスワードハッシュ')],
+        rank: data[i][headers.indexOf('ランク')],
+        joinDate: data[i][headers.indexOf('入会日')]
+      };
+    }
+  }
+  return null;
+}
+
+function hashPassword(password, salt) {
+  const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password + ':' + salt, Utilities.Charset.UTF_8);
+  return raw.map(function (byte) {
+    const v = (byte < 0 ? byte + 256 : byte).toString(16);
+    return v.length === 1 ? '0' + v : v;
+  }).join('');
 }
 
 /**
