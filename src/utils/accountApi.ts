@@ -50,5 +50,4 @@ export const startLineVerification = () =>
 export const verifyLineAndRegister = (email: string, password: string, token: string, code: string, name?: string) =>
   callGas('verifyLineAndRegister', { email, password, token, code, name });
 
-// ★ LINE公式アカウントの友だち追加リンク（line.me/R/ti/p/@から始まるもの）をここに貼り付けてください
-export const LINE_OA_ADD_FRIEND_URL = '★ここにLINE公式アカウントの友だち追加URLを貼り付け★';
+export const LINE_OA_ADD_FRIEND_URL = 'https://lin.ee/TBKmXZ1';
