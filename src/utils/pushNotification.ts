@@ -19,8 +19,8 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
 
   try {
-    const registration = await navigator.serviceWorker.register('/sw.js', {
-      scope: '/',
+    const registration = await navigator.serviceWorker.register('./sw.js', {
+      scope: './',
     });
     swRegistration = registration;
     console.log('Service Worker registered successfully:', registration.scope);
@@ -142,10 +142,10 @@ export async function sendLocalPushNotification(payload: NotificationPayload): P
       if (activeReg && typeof activeReg.showNotification === 'function') {
         await activeReg.showNotification(payload.title, {
           body: payload.body,
-          icon: '/favicon.ico',
-          badge: '/favicon.ico',
+          icon: './icon.png',
+          badge: './icon.png',
           tag: payload.tag || 'kanzaki-railway',
-          data: { url: payload.url || '/' },
+          data: { url: payload.url || './' },
           vibrate: [200, 100, 200],
         } as NotificationOptions);
         return true;
@@ -163,7 +163,7 @@ export async function sendLocalPushNotification(payload: NotificationPayload): P
         try {
           new NotificationCtor(payload.title, {
             body: payload.body,
-            icon: '/favicon.ico',
+            icon: './icon.png',
             tag: payload.tag || 'kanzaki-railway',
           });
           return true;
