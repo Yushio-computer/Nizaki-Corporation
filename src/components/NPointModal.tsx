@@ -85,7 +85,7 @@ export const NPointModal: React.FC<NPointModalProps> = ({
                 <div className="w-1.5 h-12 bg-slate-950" />
               </div>
               <div className="text-xs font-mono font-bold text-slate-800 mt-2 tracking-widest">
-                {currentUser?.memberId ? `${currentUser.memberId} ・ 4092` : '9920 1250 8831 4092'}
+                {currentUser?.memberId || '未ログイン'}
               </div>
             </div>
 
@@ -100,10 +100,10 @@ export const NPointModal: React.FC<NPointModalProps> = ({
 
               <div className="text-right">
                 <div className="text-[9px] text-slate-400 font-mono">
-                  {currentUser ? `神埼ID: ${currentUser.memberId}` : '神埼ID 連携済'}
+                  {currentUser ? `神埼ID: ${currentUser.memberId}` : '未ログイン'}
                 </div>
                 <div className="text-[9px] text-slate-400 font-mono mt-0.5 truncate max-w-[140px]">
-                  {currentUser?.email || '有効期限: 2027.12'}
+                  {currentUser?.email || 'ログインしてご利用ください'}
                 </div>
               </div>
             </div>
