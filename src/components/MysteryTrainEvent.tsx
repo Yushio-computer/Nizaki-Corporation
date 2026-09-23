@@ -26,6 +26,7 @@ import {
   Station72,
   MysteryStage,
 } from '../data/mysteryTrainData';
+import { LINE_OA_ADD_FRIEND_URL } from '../utils/accountApi';
 
 interface MysteryTrainEventProps {
   onBack?: () => void;
@@ -607,7 +608,7 @@ export const MysteryTrainEvent: React.FC<MysteryTrainEventProps> = ({
                 </button>
 
                 <a
-                  href="https://line.me"
+                  href={LINE_OA_ADD_FRIEND_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-11 bg-[#06C755] hover:bg-[#05b34c] active:scale-[0.98] text-white px-4 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"

@@ -5,6 +5,7 @@ import {
   HelpCircle, ChevronRight, AlertCircle, X, Volume2, VolumeX,
   ExternalLink, Gem, Flame, ArrowRight, ArrowLeft, LogOut, Image as ImageIcon
 } from 'lucide-react';
+import { LINE_OA_ADD_FRIEND_URL } from '../utils/accountApi';
 
 // ============================================================================
 // 1. 定数・データ定義（神埼鉄道 全72駅 ＋ 雅石謎解きデータ）
@@ -1175,7 +1176,7 @@ export const MysteryTrainApp = ({ onAddNPoints, onExit, posterImageUrl }) => {
               </button>
 
               <a
-                href="https://line.me"
+                href={LINE_OA_ADD_FRIEND_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-12 px-6 rounded-xl bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all"
