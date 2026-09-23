@@ -56,6 +56,9 @@ function doPost(e) {
     if (json.action === 'login') {
       return handleLogin(json.email, json.password);
     }
+    if (json.action === 'deleteAccount') {
+      return handleDeleteAccount(json.email, json.password);
+    }
     if (json.action === 'startLineVerification') {
       return handleStartLineVerification();
     }
@@ -353,6 +356,37 @@ function handleLogin(email, password) {
     status: 'success',
     user: { memberId: member.memberId, name: member.name, email: member.email, rank: member.rank, joinDate: member.joinDate }
   });
+}
+
+/**
+ * ④ アカウント削除(パスワード再確認のうえ会員台帳から行ごと削除)
+ */
+function handleDeleteAccount(email, password) {
+  email = (email || '').trim().toLowerCase();
+  const member = findMemberByEmail(email);
+
+  if (!member) {
+    return createJsonResponse({ status: 'error', message: 'メールアドレスまたはパスワードが正しくありません。' });
+  }
+
+  const inputHash = hashPassword(password, member.salt);
+  if (inputHash !== member.passwordHash) {
+    return createJsonResponse({ status: 'error', message: 'メールアドレスまたはパスワードが正しくありません。' });
+  }
+
+  const sheet = getOrCreateMembersSheet();
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const emailIdx = headers.indexOf('メールアドレス');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][emailIdx]).trim().toLowerCase() === email) {
+      sheet.deleteRow(i + 1); // シートの行番号は1始まり、かつヘッダー行(1行目)がある分+1
+      break;
+    }
+  }
+
+  return createJsonResponse({ status: 'success', message: 'アカウントを削除しました。' });
 }
 
 function findMemberByEmail(email) {
