@@ -1005,9 +1005,9 @@ export const MysteryTrainApp = ({ onAddNPoints, onExit, posterImageUrl }) => {
                 <line x1="200" y1="0" x2="200" y2="240" stroke="#251F33" strokeDasharray="4" />
                 <line x1="300" y1="0" x2="300" y2="240" stroke="#251F33" strokeDasharray="4" />
 
-                {/* 3点を結ぶ三角形（柏(200, 40) - 北千住(80, 190) - 我孫子(320, 90)） */}
+                {/* 3点を結ぶ三角形（柏(378, 40) - 北千住(290, 190) - 我孫子(120, 90)・架空駅） */}
                 <polygon
-                  points="200,45 80,190 320,80"
+                  points="378,45 290,190 120,90"
                   fill="rgba(245, 158, 11, 0.1)"
                   stroke="url(#goldLine)"
                   strokeWidth="3"
@@ -1015,27 +1015,27 @@ export const MysteryTrainApp = ({ onAddNPoints, onExit, posterImageUrl }) => {
                 />
 
                 {/* 頂点1: 柏駅 */}
-                <circle cx="200" cy="45" r="7" fill="#10B981" stroke="#FFF" strokeWidth="2" />
-                <text x="200" y="30" fill="#6EE7B7" fontSize="11" fontWeight="bold" textAnchor="middle">
+                <circle cx="378" cy="45" r="7" fill="#10B981" stroke="#FFF" strokeWidth="2" />
+                <text x="378" y="30" fill="#6EE7B7" fontSize="11" fontWeight="bold" textAnchor="middle">
                   柏駅（緑白の雅石）
                 </text>
 
                 {/* 頂点2: 北千住駅 */}
-                <circle cx="80" cy="190" r="7" fill="#06B6D4" stroke="#FFF" strokeWidth="2" />
-                <text x="80" y="215" fill="#67E8F9" fontSize="11" fontWeight="bold" textAnchor="middle">
+                <circle cx="290" cy="190" r="7" fill="#06B6D4" stroke="#FFF" strokeWidth="2" />
+                <text x="290" y="215" fill="#67E8F9" fontSize="11" fontWeight="bold" textAnchor="middle">
                   北千住駅（蒼線の雅石）
                 </text>
 
                 {/* 頂点3: 我孫子駅 */}
-                <circle cx="320" cy="80" r="7" fill="#A855F7" stroke="#FFF" strokeWidth="2" />
-                <text x="320" y="65" fill="#D8B4FE" fontSize="11" fontWeight="bold" textAnchor="middle">
+                <circle cx="120" cy="90" r="7" fill="#A855F7" stroke="#FFF" strokeWidth="2" />
+                <text x="120" y="65" fill="#D8B4FE" fontSize="11" fontWeight="bold" textAnchor="middle">
                   我孫子駅（時空の雅石）
                 </text>
 
                 {/* 中心：松戸駅 */}
-                <circle cx="160" cy="140" r="10" fill="#EF4444" stroke="#F59E0B" strokeWidth="3" className="animate-ping opacity-75" />
-                <circle cx="160" cy="140" r="7" fill="#EF4444" stroke="#FFF" strokeWidth="2" />
-                <text x="160" y="165" fill="#FCA5A5" fontSize="12" fontWeight="black" textAnchor="middle">
+                <circle cx="325" cy="115" r="10" fill="#EF4444" stroke="#F59E0B" strokeWidth="3" className="animate-ping opacity-75" />
+                <circle cx="325" cy="115" r="7" fill="#EF4444" stroke="#FFF" strokeWidth="2" />
+                <text x="325" y="140" fill="#FCA5A5" fontSize="12" fontWeight="black" textAnchor="middle">
                   ？（三角形の中心）
                 </text>
               </svg>
