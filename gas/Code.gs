@@ -52,6 +52,17 @@ function doPost(e) {
       return createJsonResponse({ status: 'success', saved: saved });
     }
 
+    // ①.5 神埼ID 会員認証まわり（LINE経由の新規登録／ログイン）
+    if (json.action === 'login') {
+      return handleLogin(json.email, json.password);
+    }
+    if (json.action === 'startLineVerification') {
+      return handleStartLineVerification();
+    }
+    if (json.action === 'verifyLineAndRegister') {
+      return handleVerifyLineAndRegister(json.email, json.password, json.token, json.code, json.name);
+    }
+
     // ② LINE Messaging APIからのWebhookイベント
     if (json.events && Array.isArray(json.events)) {
       for (let i = 0; i < json.events.length; i++) {
@@ -84,6 +95,13 @@ function handleLineMessage(event) {
   const replyToken = event.replyToken;
   const userId = event.source ? event.source.userId : 'unknown';
   const text = event.message.text.trim();
+
+  // 0. 神埼ID新規登録用の合言葉判定(最優先)
+  const normalizedToken = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (normalizedToken.length === 6 && CacheService.getScriptCache().get('line_pending_' + normalizedToken)) {
+    handleLineVerificationMessage(replyToken, userId, normalizedToken);
+    return;
+  }
 
   // 1. スタンプラリー合言葉の判定 (「初級クリア済み」など)
   // ★ GAS側からは返信せず、スプレッドシートに記録するだけ（返信・クーポン表示はLINE公式の応答メッセージ機能に委ねる）
@@ -310,6 +328,167 @@ function saveOrderToSheet(order) {
     Logger.log('予約台帳保存エラー: ' + err.toString());
     return false;
   }
+}
+
+// シート名定義（会員台帳）
+const SHEET_MEMBERS = '会員台帳';
+
+/**
+ * ③ ログイン
+ */
+function handleLogin(email, password) {
+  email = (email || '').trim().toLowerCase();
+  const member = findMemberByEmail(email);
+
+  if (!member) {
+    return createJsonResponse({ status: 'error', message: 'メールアドレスまたはパスワードが正しくありません。' });
+  }
+
+  const inputHash = hashPassword(password, member.salt);
+  if (inputHash !== member.passwordHash) {
+    return createJsonResponse({ status: 'error', message: 'メールアドレスまたはパスワードが正しくありません。' });
+  }
+
+  return createJsonResponse({
+    status: 'success',
+    user: { memberId: member.memberId, name: member.name, email: member.email, rank: member.rank, joinDate: member.joinDate }
+  });
+}
+
+function findMemberByEmail(email) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss ? ss.getSheetByName(SHEET_MEMBERS) : null;
+  if (!sheet) return null;
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return null;
+  const headers = data[0];
+  const emailIdx = headers.indexOf('メールアドレス');
+  const lineIdx = headers.indexOf('LINE_USER_ID');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][emailIdx]).trim().toLowerCase() === email) {
+      return {
+        memberId: data[i][headers.indexOf('会員ID')],
+        name: data[i][headers.indexOf('表示名')],
+        email: data[i][emailIdx],
+        salt: data[i][headers.indexOf('パスワードソルト')],
+        passwordHash: data[i][headers.indexOf('パスワードハッシュ')],
+        rank: data[i][headers.indexOf('ランク')],
+        joinDate: data[i][headers.indexOf('入会日')],
+        lineUserId: lineIdx !== -1 ? data[i][lineIdx] : ''
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * 会員台帳シートを取得(無ければヘッダー付きで新規作成)
+ */
+function getOrCreateMembersSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.create('神埼鉄道_業務データ');
+  let sheet = ss.getSheetByName(SHEET_MEMBERS);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_MEMBERS);
+    sheet.appendRow(['登録日時', 'メールアドレス', '会員ID', '表示名', 'パスワードソルト', 'パスワードハッシュ', 'ランク', '入会日', 'LINE_USER_ID']);
+    sheet.getRange('A1:I1').setBackground('#5B21B6').setFontColor('#FFFFFF').setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * LINE経由の神埼ID新規登録: 合言葉トークンの発行(登録ステップ1)
+ */
+function handleStartLineVerification() {
+  const token = generateToken(6);
+  CacheService.getScriptCache().put('line_pending_' + token, '1', 600); // 10分間有効
+  return createJsonResponse({ status: 'success', token: token });
+}
+
+/**
+ * LINEからその合言葉が届いたときの処理(handleLineMessageから呼ばれる)
+ */
+function handleLineVerificationMessage(replyToken, userId, token) {
+  const cache = CacheService.getScriptCache();
+  cache.remove('line_pending_' + token);
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  cache.put('line_otp_' + token, JSON.stringify({ code: code, lineUserId: userId }), 600); // 10分間有効
+
+  replyToLine(replyToken, [{
+    type: 'text',
+    text:
+      '🚆神埼鉄道グループ NIIZAKI\n\n' +
+      '神埼ID新規登録の認証コードです。\n\n' +
+      '認証コード: ' + code + '\n\n' +
+      'アプリの画面に入力して登録を完了してください。\n' +
+      '※このコードの有効期限は発行から10分間です。'
+  }]);
+}
+
+/**
+ * LINE経由の神埼ID新規登録: コード検証＋本登録(登録ステップ2)
+ * ※このタイミングでLINEのuserIdも同時に会員台帳へ紐付けられる
+ */
+function handleVerifyLineAndRegister(email, password, token, code, name) {
+  email = (email || '').trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return createJsonResponse({ status: 'error', message: 'メールアドレスの形式が正しくありません。' });
+  }
+
+  if (findMemberByEmail(email)) {
+    return createJsonResponse({ status: 'error', message: 'このメールアドレスは既に登録されています。ログインをお試しください。' });
+  }
+
+  const normalizedToken = (token || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const cache = CacheService.getScriptCache();
+  const raw = cache.get('line_otp_' + normalizedToken);
+  if (!raw) {
+    return createJsonResponse({ status: 'error', message: '認証コードが正しくないか、有効期限が切れています。' });
+  }
+
+  const data = JSON.parse(raw);
+  if (String(code).trim() !== data.code) {
+    return createJsonResponse({ status: 'error', message: '認証コードが正しくありません。' });
+  }
+
+  const salt = Utilities.getUuid();
+  const passwordHash = hashPassword(password, salt);
+  const memberId = 'KZ-' + Math.floor(10000 + Math.random() * 90000);
+  const joinDate = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+
+  const sheet = getOrCreateMembersSheet();
+  const timestamp = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
+  sheet.appendRow([timestamp, email, memberId, name || email.split('@')[0], salt, passwordHash, 'レギュラー', joinDate, data.lineUserId || '']);
+
+  cache.remove('line_otp_' + normalizedToken);
+
+  return createJsonResponse({
+    status: 'success',
+    user: { memberId: memberId, name: name || email.split('@')[0], email: email, rank: 'レギュラー', joinDate: joinDate }
+  });
+}
+
+/**
+ * ランダムな合言葉トークンを生成(紛らわしい0/O, 1/Iは除外)
+ */
+function generateToken(len) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = '';
+  for (let i = 0; i < len; i++) {
+    out += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return out;
+}
+
+function hashPassword(password, salt) {
+  const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password + ':' + salt, Utilities.Charset.UTF_8);
+  return raw.map(function (byte) {
+    const v = (byte < 0 ? byte + 256 : byte).toString(16);
+    return v.length === 1 ? '0' + v : v;
+  }).join('');
 }
 
 /**
