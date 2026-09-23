@@ -277,6 +277,11 @@ export const EventsTab: React.FC<EventsTabProps> = ({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#857D99] pt-1">
+                  <span className="flex items-center gap-1">
+                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                    難易度: ★★★☆☆
+                  </span>
+                  <span>・</span>
                   <span>全3幕構成</span>
                   <span>・</span>
                   <span>電子スタンプ押印 ＆ 特典クーポン付き</span>

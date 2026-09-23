@@ -120,42 +120,7 @@ export const MyPageModal: React.FC<MyPageModalProps> = ({
           },
         ]
       : []),
-    // 3. 過去の特急乗車履歴
-    {
-      id: 'act_past_ticket_1',
-      category: 'ticket',
-      title: '特急きらめき 203号 2号車 8B席',
-      subtitle: '東京駅 (14:30) → 水戸駅 (15:45)',
-      date: '2026/09/18',
-      status: '乗車済',
-      statusColor: 'slate',
-      amount: '¥2,100',
-      pointsEarned: 63,
-    },
-    // 4. イベント・スタンプラリー
-    {
-      id: 'act_event_1',
-      category: 'event',
-      title: '鉄道ミステリー『斬丸と三つの雅石』',
-      subtitle: '東京駅 チェックポイント「碧の雅石」スタンプ獲得',
-      date: '2026/09/20',
-      status: 'スタンプ獲得済',
-      statusColor: 'indigo',
-      amount: '参加特典',
-      pointsEarned: 100,
-    },
-    {
-      id: 'act_event_2',
-      category: 'event',
-      title: '神埼線周遊 謎解きイベント参加',
-      subtitle: '『消えた試運転列車の謎』第1章 クリア達成',
-      date: '2026/09/15',
-      status: 'クリア済',
-      statusColor: 'indigo',
-      amount: '限定クーポン付与',
-      pointsEarned: 150,
-    },
-    // 5. N-POINT獲得・登録ボーナス
+    // 3. N-POINT獲得・登録ボーナス
     ...pointHistory.map((p) => ({
       id: `act_pt_${p.id}`,
       category: 'point' as const,
