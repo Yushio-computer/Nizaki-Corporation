@@ -17,9 +17,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Award,
+  Trash2,
+  Lock,
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { UserProfile, ActiveOrder, PointHistoryItem, AccountActivityItem } from '../types';
+import { deleteAccount } from '../utils/accountApi';
 
 interface MyPageModalProps {
   isOpen: boolean;
@@ -49,7 +52,37 @@ export const MyPageModal: React.FC<MyPageModalProps> = ({
   const [smartPayEnabled, setSmartPayEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   if (!isOpen || !currentUser) return null;
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      setDeleteError('確認のため、パスワードを入力してください。');
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      const result = await deleteAccount(currentUser.email, deletePassword);
+      if (result.status === 'success') {
+        onLogout();
+        setShowDeleteConfirm(false);
+        setDeletePassword('');
+        onClose();
+      } else {
+        setDeleteError(result.message || 'パスワードが正しくありません。');
+      }
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : '削除中にエラーが発生しました。');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // 動的なアカウント利用履歴データの生成
   const activities: AccountActivityItem[] = [
@@ -565,6 +598,80 @@ export const MyPageModal: React.FC<MyPageModalProps> = ({
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>ログアウトする</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 6. Delete Account Section */}
+          <div className="pt-2">
+            {!showDeleteConfirm ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteConfirm(true);
+                  setDeleteError(null);
+                  setDeletePassword('');
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-transparent hover:bg-rose-50 border border-transparent hover:border-rose-200 text-rose-400 hover:text-rose-600 font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>神埼IDを削除する</span>
+              </button>
+            ) : (
+              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-300 space-y-3 animate-fadeIn">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-bold text-rose-950">
+                      アカウント削除の確認
+                    </h4>
+                    <p className="text-[11px] text-rose-800 mt-1 leading-relaxed">
+                      この操作は取り消せません。会員情報、保有N-POINT（{balance.toLocaleString()}pt）、予約履歴がすべて削除されます。続行するには、確認のためパスワードを入力してください。
+                    </p>
+                  </div>
+                </div>
+
+                {deleteError && (
+                  <div className="p-2 rounded-lg bg-rose-100 border border-rose-300 text-rose-700 text-[11px] font-medium">
+                    {deleteError}
+                  </div>
+                )}
+
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-rose-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder="パスワードを入力"
+                    className="w-full h-10 pl-9 pr-3 rounded-xl border border-rose-300 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 text-xs text-[#221C35] outline-none bg-white"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeletePassword('');
+                      setDeleteError(null);
+                    }}
+                    disabled={isDeleting}
+                    className="flex-1 py-2 px-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteAccount}
+                    disabled={isDeleting}
+                    className="flex-1 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{isDeleting ? '削除中...' : '完全に削除する'}</span>
                   </button>
                 </div>
               </div>

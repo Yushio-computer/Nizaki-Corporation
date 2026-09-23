@@ -35,12 +35,6 @@ async function callGas(action: string, payload: Record<string, unknown>): Promis
   return res.json();
 }
 
-export const sendVerificationCode = (email: string) =>
-  callGas('sendVerificationCode', { email });
-
-export const verifyAndRegister = (email: string, code: string, password: string, name?: string) =>
-  callGas('verifyAndRegister', { email, code, password, name });
-
 export const loginWithPassword = (email: string, password: string) =>
   callGas('login', { email, password });
 
@@ -49,5 +43,8 @@ export const startLineVerification = () =>
 
 export const verifyLineAndRegister = (email: string, password: string, token: string, code: string, name?: string) =>
   callGas('verifyLineAndRegister', { email, password, token, code, name });
+
+export const deleteAccount = (email: string, password: string) =>
+  callGas('deleteAccount', { email, password });
 
 export const LINE_OA_ADD_FRIEND_URL = 'https://lin.ee/TBKmXZ1';
