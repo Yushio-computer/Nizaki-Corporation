@@ -7,7 +7,6 @@ import {
   Sparkles,
   Coins,
   ShieldCheck,
-  CreditCard,
   Bell,
   ChevronRight,
   QrCode,
@@ -49,7 +48,6 @@ export const MyPageModal: React.FC<MyPageModalProps> = ({
 }) => {
   const [activeHistoryTab, setActiveHistoryTab] = useState<'all' | 'ticket' | 'delivery' | 'event' | 'point'>('all');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [smartPayEnabled, setSmartPayEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -497,26 +495,6 @@ export const MyPageModal: React.FC<MyPageModalProps> = ({
             </h3>
 
             <div className="space-y-2 text-xs">
-              {/* Smart Pay */}
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F9F8FC] border border-[#ECE8F4]">
-                <div className="flex items-center gap-2.5">
-                  <CreditCard className="w-4 h-4 text-[#5B21B6]" />
-                  <div>
-                    <div className="font-bold text-[#221C35]">Smart Pay (ワンタップ決済)</div>
-                    <div className="text-[10px] text-[#716986]">VISA **** 4092 連携中</div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSmartPayEnabled(!smartPayEnabled)}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                    smartPayEnabled ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
-                  }`}
-                >
-                  {smartPayEnabled ? '有効 (自動決済)' : '無効'}
-                </button>
-              </div>
-
               {/* Notifications */}
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F9F8FC] border border-[#ECE8F4]">
                 <div className="flex items-center gap-2.5">
