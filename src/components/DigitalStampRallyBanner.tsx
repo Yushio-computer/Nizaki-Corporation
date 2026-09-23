@@ -10,7 +10,7 @@ export const DigitalStampRallyBanner: React.FC<DigitalStampRallyBannerProps> = (
   className = '',
 }) => {
   const [imgLoaded, setImgLoaded] = useState<boolean>(false);
-  const targetSrc = customImageUrl || '/HAPYOU.png';
+  const targetSrc = customImageUrl || './HAPYOU.png';
 
   useEffect(() => {
     let active = true;

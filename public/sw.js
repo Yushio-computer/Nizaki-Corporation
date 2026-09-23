@@ -24,13 +24,13 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: './icon.png',
+    badge: './icon.png',
     vibrate: [200, 100, 200],
     tag: data.tag || 'kanzaki-push',
     renotify: true,
     data: {
-      url: data.url || '/',
+      url: data.url || './',
       timestamp: Date.now(),
     },
     actions: [
@@ -58,7 +58,7 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
       if (self.clients.openWindow) {
-        return self.clients.openWindow('/');
+        return self.clients.openWindow('./');
       }
     })
   );
