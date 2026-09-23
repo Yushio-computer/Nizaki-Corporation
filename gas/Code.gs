@@ -92,6 +92,30 @@ function doGet(e) {
 }
 
 /**
+ * 業務データ用スプレッドシートを取得
+ * ※Webアプリ経由(外部からのHTTPリクエスト)ではSpreadsheetApp.getActiveSpreadsheet()が
+ *   常にnullを返すため、初回作成時のIDをスクリプトプロパティに保存して毎回同じ
+ *   スプレッドシートを参照するようにする(でないと呼び出すたびに新しい使い捨て
+ *   スプレッドシートが作られてしまい、書き込んだデータが二度と読み出せなくなる)
+ */
+function getDataSpreadsheet() {
+  const props = PropertiesService.getScriptProperties();
+  const savedId = props.getProperty('DATA_SPREADSHEET_ID');
+
+  if (savedId) {
+    try {
+      return SpreadsheetApp.openById(savedId);
+    } catch (err) {
+      Logger.log('保存済みスプレッドシートIDが無効です。新規作成します: ' + err.toString());
+    }
+  }
+
+  const ss = SpreadsheetApp.create('神埼鉄道_業務データ');
+  props.setProperty('DATA_SPREADSHEET_ID', ss.getId());
+  return ss;
+}
+
+/**
  * LINEメッセージの振り分け処理
  */
 function handleLineMessage(event) {
@@ -134,8 +158,8 @@ function handleLineMessage(event) {
  */
 function handleReservationInquiry(replyToken, userId, text) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss ? ss.getSheetByName(SHEET_RESERVATIONS) : null;
+    const ss = getDataSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_RESERVATIONS);
     
     if (!sheet) {
       replyToLine(replyToken, [{
@@ -254,7 +278,7 @@ function replyToLine(replyToken, messages) {
  */
 function logCouponIssue(userId, course) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.create('神埼鉄道_業務データ');
+    const ss = getDataSpreadsheet();
     let sheet = ss.getSheetByName(SHEET_COUPON_LOGS);
 
     if (!sheet) {
@@ -290,7 +314,7 @@ function logCouponIssue(userId, course) {
  */
 function saveOrderToSheet(order) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.create('神埼鉄道_業務データ');
+    const ss = getDataSpreadsheet();
     let sheet = ss.getSheetByName(SHEET_RESERVATIONS);
 
     if (!sheet) {
@@ -390,8 +414,8 @@ function handleDeleteAccount(email, password) {
 }
 
 function findMemberByEmail(email) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss ? ss.getSheetByName(SHEET_MEMBERS) : null;
+  const ss = getDataSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_MEMBERS);
   if (!sheet) return null;
 
   const data = sheet.getDataRange().getValues();
@@ -421,7 +445,7 @@ function findMemberByEmail(email) {
  * 会員台帳シートを取得(無ければヘッダー付きで新規作成)
  */
 function getOrCreateMembersSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.create('神埼鉄道_業務データ');
+  const ss = getDataSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_MEMBERS);
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_MEMBERS);
