@@ -12,6 +12,12 @@
 // ★ LINE Developers「Messaging API設定」タブの「チャネルアクセストークン（長期）」を貼り付け
 const CHANNEL_ACCESS_TOKEN = '★ここにLINEのチャネルアクセストークンを貼り付け★';
 
+// ★ 認証コードメールの送信元にする「送信元エイリアス」のメールアドレス
+//   Gmail設定「アカウントとインポート＞名前でメールを送信」で先に認証しておくこと
+//   （個人のGmailアドレスをそのまま使いたくない場合の匿名化用）
+const SENDER_ALIAS_EMAIL = '★ここにエイリアス用メールアドレスを貼り付け★';
+const SENDER_DISPLAY_NAME = '神埼鉄道グループ';
+
 // 運行情報API URL
 const WEB_APP_STATUS_API_URL = 'https://ais-pre-ohfkihkjtj5aocgi5fefnb-251112274276.asia-east1.run.app/api/status';
 
@@ -343,16 +349,19 @@ function handleSendVerificationCode(email) {
   CacheService.getScriptCache().put('otp_' + email, code, 600); // 10分間有効
 
   try {
-    MailApp.sendEmail({
-      to: email,
-      subject: '【神埼鉄道】神埼ID 新規登録 認証コード',
-      body:
-        '神埼鉄道グループをご利用いただきありがとうございます。\n\n' +
+    const useAlias = SENDER_ALIAS_EMAIL && !SENDER_ALIAS_EMAIL.includes('★');
+    GmailApp.sendEmail(
+      email,
+      '【神埼鉄道】神埼ID 新規登録 認証コード',
+      '神埼鉄道グループをご利用いただきありがとうございます。\n\n' +
         '以下の認証コードをアプリの画面に入力し、登録を完了してください。\n\n' +
         '認証コード: ' + code + '\n\n' +
         '※このコードの有効期限は発行から10分間です。\n' +
-        '※本メールに心当たりがない場合は、破棄してください。'
-    });
+        '※本メールに心当たりがない場合は、破棄してください。',
+      useAlias
+        ? { from: SENDER_ALIAS_EMAIL, name: SENDER_DISPLAY_NAME }
+        : { name: SENDER_DISPLAY_NAME }
+    );
   } catch (err) {
     Logger.log('認証コードメール送信エラー: ' + err.toString());
     return createJsonResponse({ status: 'error', message: 'メール送信に失敗しました。時間をおいて再度お試しください。' });

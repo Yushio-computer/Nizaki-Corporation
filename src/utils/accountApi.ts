@@ -1,6 +1,6 @@
 // 神埼ID 会員認証 API（Google Apps Script バックエンド連携）
 // ★ gas/Code.gs をデプロイして発行された「ウェブアプリのURL」（.../exec）をここに貼り付けてください
-const GAS_ACCOUNT_API_URL = '★ここにGASウェブアプリのURL（.../exec）を貼り付け★';
+const GAS_ACCOUNT_API_URL = 'https://script.google.com/macros/s/AKfycbzBwj3vNZi2zGMS965SzLzX7yUSk2WmiAxWA_kRK9SAyr007WHi1ffJ_l9OtLdKICYb/exec';
 
 interface GasResponse {
   status: 'success' | 'error';
