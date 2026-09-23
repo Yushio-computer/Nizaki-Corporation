@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Lock, Mail, ShieldCheck, ArrowRight, Sparkles, CheckCircle2, Train, KeyRound } from 'lucide-react';
+import { X, Lock, Mail, ShieldCheck, ArrowRight, Sparkles, Train, KeyRound } from 'lucide-react';
 import { UserProfile } from '../types';
 import {
-  sendVerificationCode,
-  verifyAndRegister,
   loginWithPassword,
   startLineVerification,
   verifyLineAndRegister,
@@ -18,7 +16,7 @@ interface LoginModalProps {
   onSuccessCallback?: () => void;
 }
 
-type RegisterStep = 'form' | 'verify' | 'line-wait';
+type RegisterStep = 'form' | 'line-wait';
 
 const validatePassword = (pw: string): string | null => {
   if (pw.length < 6) return 'パスワードは6文字以上で入力してください。';
@@ -129,7 +127,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
-  // 新規登録フォーム(メール・パスワード)の入力チェック(メール版・LINE版共通)
+  // 新規登録フォーム(メール・パスワード)の入力チェック
   const validateRegisterForm = (): string | null => {
     const email = idOrEmail.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -141,35 +139,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     return null;
   };
 
-  // 新規登録 ステップ1(メール版): 入力内容を検証して認証コードを送信
-  const handleRegisterFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    const validationError = validateRegisterForm();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const result = await sendVerificationCode(idOrEmail.trim().toLowerCase());
-      if (result.status === 'success') {
-        setRegisterStep('verify');
-        setResendCooldown(60);
-      } else {
-        setError(result.message || '認証コードの送信に失敗しました。');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '認証コードの送信中にエラーが発生しました。');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // 新規登録 ステップ1(LINE版): 入力内容を検証して合言葉トークンを発行
-  const handleStartLine = async () => {
+  // 新規登録 ステップ1: 入力内容を検証して合言葉トークンを発行
+  const handleStartLineCore = async () => {
     setError(null);
 
     const validationError = validateRegisterForm();
@@ -194,6 +165,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleStartLineSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleStartLineCore();
   };
 
   // 新規登録 ステップ2(LINE版): LINEで届いた認証コードを検証して本登録
@@ -235,65 +211,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
-  // 新規登録 ステップ2: 届いた認証コードを検証して本登録
-  const handleVerifySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    const code = otpCode.trim();
-    if (!/^\d{6}$/.test(code)) {
-      setError('6桁の認証コードを入力してください。');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const email = idOrEmail.trim().toLowerCase();
-      const result = await verifyAndRegister(email, code, password);
-      if (result.status === 'success' && result.user) {
-        const user: UserProfile = {
-          memberId: result.user.memberId,
-          name: result.user.name,
-          email: result.user.email,
-          rank: result.user.rank as UserProfile['rank'],
-          joinDate: result.user.joinDate,
-        };
-        onLogin(user);
-        resetAll();
-        onClose();
-        if (onSuccessCallback) {
-          onSuccessCallback();
-        }
-      } else {
-        setError(result.message || '認証コードが正しくありません。');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '認証中にエラーが発生しました。');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (resendCooldown > 0) return;
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      const email = idOrEmail.trim().toLowerCase();
-      const result = await sendVerificationCode(email);
-      if (result.status === 'success') {
-        setResendCooldown(60);
-      } else {
-        setError(result.message || '認証コードの再送信に失敗しました。');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '再送信中にエラーが発生しました。');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const showingVerifyStep = isRegisterMode && registerStep === 'verify';
   const showingLineStep = isRegisterMode && registerStep === 'line-wait';
 
   return (
@@ -325,9 +242,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           <h3 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
             <Train className="w-5 h-5 text-amber-300" />
             <span>
-              {showingVerifyStep
-                ? 'メール認証コードの入力'
-                : showingLineStep
+              {showingLineStep
                 ? 'LINE認証コードの入力'
                 : isRegisterMode
                 ? '神埼ID 新規会員登録（無料）'
@@ -336,7 +251,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </h3>
 
           {/* 理由の提示（なぜログインが必要か） */}
-          {reason && !showingVerifyStep && !showingLineStep && (
+          {reason && !showingLineStep && (
             <div className="mt-3 p-2.5 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs flex items-start gap-2 leading-relaxed">
               <ShieldCheck className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
               <span>{reason}</span>
@@ -444,7 +359,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           {/* 新規登録 ステップ1: メールアドレス・パスワード入力 */}
           {isRegisterMode && registerStep === 'form' && (
             <form
-              onSubmit={handleRegisterFormSubmit}
+              onSubmit={handleStartLineSubmit}
               action="#"
               method="post"
               autoComplete="on"
@@ -470,7 +385,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     className="w-full h-10 pl-9 pr-3 rounded-xl border border-[#E5E2EE] focus:border-[#5B21B6] focus:ring-1 focus:ring-[#5B21B6] text-xs text-[#221C35] outline-none"
                   />
                 </div>
-                <p className="text-[10px] text-[#857D99] pt-0.5">このアドレス宛に6桁の認証コードを送信します。</p>
+                <p className="text-[10px] text-[#857D99] pt-0.5">ログイン時に使うアカウントIDになります（認証コードはLINEに届きます）。</p>
               </div>
 
               <div className="space-y-1">
@@ -518,22 +433,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full h-11 rounded-xl bg-[#221C35] hover:bg-[#3B1F68] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer pt-1 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <span>{isSubmitting ? '送信中...' : 'メールで認証コードを受け取る'}</span>
-                {!isSubmitting && <ArrowRight className="w-4 h-4" />}
-              </button>
-
-              <div className="flex items-center gap-3 text-[11px] text-[#857D99]">
-                <div className="h-px bg-[#E5E2EE] flex-1" />
-                <span>または</span>
-                <div className="h-px bg-[#E5E2EE] flex-1" />
-              </div>
-
-              <button
-                type="button"
-                onClick={handleStartLine}
                 disabled={isSubmitting}
                 className="w-full h-11 rounded-xl bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
@@ -608,7 +507,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={handleStartLine}
+                  onClick={handleStartLineCore}
                   disabled={resendCooldown > 0 || isSubmitting}
                   className="text-[#5B21B6] hover:underline font-bold cursor-pointer disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed"
                 >
@@ -618,73 +517,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </form>
           )}
 
-          {/* 新規登録 ステップ2: 認証コード入力 */}
-          {showingVerifyStep && (
-            <form onSubmit={handleVerifySubmit} className="space-y-3" key="verify-form">
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-start gap-2 leading-relaxed">
-                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>
-                  <strong>{idOrEmail}</strong> 宛に6桁の認証コードを送信しました。メールをご確認のうえ入力してください。
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <label htmlFor="register-otp" className="text-xs font-bold text-[#221C35]">
-                  認証コード（6桁）
-                </label>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 text-[#857D99] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    id="register-otp"
-                    name="otp"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="123456"
-                    required
-                    className="w-full h-11 pl-9 pr-3 rounded-xl border border-[#E5E2EE] focus:border-[#5B21B6] focus:ring-1 focus:ring-[#5B21B6] text-sm tracking-[0.3em] font-bold text-[#221C35] outline-none"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full h-11 rounded-xl bg-[#221C35] hover:bg-[#3B1F68] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <span>{isSubmitting ? '認証中...' : '認証して登録完了'}</span>
-                {!isSubmitting && <ArrowRight className="w-4 h-4" />}
-              </button>
-
-              <div className="flex items-center justify-between text-[11px] pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRegisterStep('form');
-                    setOtpCode('');
-                    setError(null);
-                  }}
-                  className="text-[#857D99] hover:underline cursor-pointer"
-                >
-                  ← 入力内容を修正する
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={resendCooldown > 0 || isSubmitting}
-                  className="text-[#5B21B6] hover:underline font-bold cursor-pointer disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed"
-                >
-                  {resendCooldown > 0 ? `再送信 (${resendCooldown}秒後)` : 'コードを再送信する'}
-                </button>
-              </div>
-            </form>
-          )}
-
           {/* モード切替 */}
-          {!showingVerifyStep && !showingLineStep && (
+          {!showingLineStep && (
             <div className="text-center pt-1">
               <button
                 type="button"

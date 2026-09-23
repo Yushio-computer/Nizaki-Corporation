@@ -12,12 +12,6 @@
 // ★ LINE Developers「Messaging API設定」タブの「チャネルアクセストークン（長期）」を貼り付け
 const CHANNEL_ACCESS_TOKEN = '★ここにLINEのチャネルアクセストークンを貼り付け★';
 
-// ★ 認証コードメールの送信元にする「送信元エイリアス」のメールアドレス
-//   Gmail設定「アカウントとインポート＞名前でメールを送信」で先に認証しておくこと
-//   （個人のGmailアドレスをそのまま使いたくない場合の匿名化用）
-const SENDER_ALIAS_EMAIL = '★ここにエイリアス用メールアドレスを貼り付け★';
-const SENDER_DISPLAY_NAME = '神埼鉄道グループ';
-
 // 運行情報API URL
 const WEB_APP_STATUS_API_URL = 'https://ais-pre-ohfkihkjtj5aocgi5fefnb-251112274276.asia-east1.run.app/api/status';
 
@@ -58,13 +52,7 @@ function doPost(e) {
       return createJsonResponse({ status: 'success', saved: saved });
     }
 
-    // ①.5 神埼ID 会員認証まわり（新規登録の認証コード送信／本登録／ログイン）
-    if (json.action === 'sendVerificationCode') {
-      return handleSendVerificationCode(json.email);
-    }
-    if (json.action === 'verifyAndRegister') {
-      return handleVerifyAndRegister(json.email, json.code, json.password, json.name);
-    }
+    // ①.5 神埼ID 会員認証まわり（LINE経由の新規登録／ログイン）
     if (json.action === 'login') {
       return handleLogin(json.email, json.password);
     }
@@ -344,77 +332,6 @@ function saveOrderToSheet(order) {
 
 // シート名定義（会員台帳）
 const SHEET_MEMBERS = '会員台帳';
-
-/**
- * ① 認証コード送信（新規登録ステップ1）
- */
-function handleSendVerificationCode(email) {
-  email = (email || '').trim().toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return createJsonResponse({ status: 'error', message: 'メールアドレスの形式が正しくありません。' });
-  }
-
-  if (findMemberByEmail(email)) {
-    return createJsonResponse({ status: 'error', message: 'このメールアドレスは既に登録されています。ログインをお試しください。' });
-  }
-
-  const code = String(Math.floor(100000 + Math.random() * 900000));
-  CacheService.getScriptCache().put('otp_' + email, code, 600); // 10分間有効
-
-  try {
-    const useAlias = SENDER_ALIAS_EMAIL && !SENDER_ALIAS_EMAIL.includes('★');
-    GmailApp.sendEmail(
-      email,
-      '【神埼鉄道】神埼ID 新規登録 認証コード',
-      '神埼鉄道グループをご利用いただきありがとうございます。\n\n' +
-        '以下の認証コードをアプリの画面に入力し、登録を完了してください。\n\n' +
-        '認証コード: ' + code + '\n\n' +
-        '※このコードの有効期限は発行から10分間です。\n' +
-        '※本メールに心当たりがない場合は、破棄してください。',
-      useAlias
-        ? { from: SENDER_ALIAS_EMAIL, name: SENDER_DISPLAY_NAME }
-        : { name: SENDER_DISPLAY_NAME }
-    );
-  } catch (err) {
-    Logger.log('認証コードメール送信エラー: ' + err.toString());
-    return createJsonResponse({ status: 'error', message: 'メール送信に失敗しました。時間をおいて再度お試しください。' });
-  }
-
-  return createJsonResponse({ status: 'success', message: '認証コードを送信しました。' });
-}
-
-/**
- * ② コード検証＋本登録（新規登録ステップ2）
- */
-function handleVerifyAndRegister(email, code, password, name) {
-  email = (email || '').trim().toLowerCase();
-  const cache = CacheService.getScriptCache();
-  const cachedCode = cache.get('otp_' + email);
-
-  if (!cachedCode || String(code).trim() !== cachedCode) {
-    return createJsonResponse({ status: 'error', message: '認証コードが正しくないか、有効期限が切れています。' });
-  }
-
-  if (findMemberByEmail(email)) {
-    return createJsonResponse({ status: 'error', message: 'このメールアドレスは既に登録されています。' });
-  }
-
-  const salt = Utilities.getUuid();
-  const passwordHash = hashPassword(password, salt);
-  const memberId = 'KZ-' + Math.floor(10000 + Math.random() * 90000);
-  const joinDate = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
-
-  const sheet = getOrCreateMembersSheet();
-  const timestamp = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
-  sheet.appendRow([timestamp, email, memberId, name || email.split('@')[0], salt, passwordHash, 'レギュラー', joinDate, '']);
-
-  cache.remove('otp_' + email);
-
-  return createJsonResponse({
-    status: 'success',
-    user: { memberId: memberId, name: name || email.split('@')[0], email: email, rank: 'レギュラー', joinDate: joinDate }
-  });
-}
 
 /**
  * ③ ログイン
