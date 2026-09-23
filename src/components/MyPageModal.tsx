@@ -537,17 +537,14 @@ export const MyPageModal: React.FC<MyPageModalProps> = ({
                 </button>
               </div>
 
-              {/* Password Manager & Google Passcode */}
+              {/* Password Manager */}
               <div className="p-2.5 rounded-xl bg-[#F9F8FC] border border-[#ECE8F4] flex items-center justify-between">
                 <div>
                   <div className="font-bold text-[#221C35] flex items-center gap-1.5">
-                    <span>Google パスワードマネージャー / パスキー連携</span>
-                    <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">
-                      有効
-                    </span>
+                    <span>パスワードマネージャー</span>
                   </div>
                   <div className="text-[10px] text-[#716986] mt-0.5">
-                    ログイン時の自動補完・指紋/顔認証パスキーに対応しています
+                    ログイン画面はブラウザのパスワード自動入力に対応しています
                   </div>
                 </div>
               </div>
