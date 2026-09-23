@@ -5,6 +5,7 @@ const GAS_ACCOUNT_API_URL = 'https://script.google.com/macros/s/AKfycbzBwj3vNZi2
 interface GasResponse {
   status: 'success' | 'error';
   message?: string;
+  token?: string;
   user?: {
     memberId: string;
     name: string;
@@ -42,3 +43,12 @@ export const verifyAndRegister = (email: string, code: string, password: string,
 
 export const loginWithPassword = (email: string, password: string) =>
   callGas('login', { email, password });
+
+export const startLineVerification = () =>
+  callGas('startLineVerification', {});
+
+export const verifyLineAndRegister = (email: string, password: string, token: string, code: string, name?: string) =>
+  callGas('verifyLineAndRegister', { email, password, token, code, name });
+
+// ★ LINE公式アカウントの友だち追加リンク（line.me/R/ti/p/@から始まるもの）をここに貼り付けてください
+export const LINE_OA_ADD_FRIEND_URL = '★ここにLINE公式アカウントの友だち追加URLを貼り付け★';
