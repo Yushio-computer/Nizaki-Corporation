@@ -11,7 +11,7 @@ export interface StationGeoData {
 
 // 神埼鉄道グループ 4路線・全74駅の正確なGPS座標データ（全駅徹底対応）
 export const KANZAKI_STATION_GEOS: StationGeoData[] = [
-  // 1. 神埼線 (Niizaki Line / Y) - 全23駅
+  // 1. 神埼線 (Nizaki Line / Y) - 全23駅
   { id: 'kanzaki_Y01', name: '東京', code: 'Y01', lineName: '1. 神埼線', lat: 35.6812, lng: 139.7671 },
   { id: 'kanzaki_Y02', name: '浅草', code: 'Y02', lineName: '1. 神埼線', lat: 35.7106, lng: 139.7966 },
   { id: 'kanzaki_Y03', name: '北千住', code: 'Y03', lineName: '1. 神埼線', lat: 35.7492, lng: 139.8052 },
@@ -36,7 +36,7 @@ export const KANZAKI_STATION_GEOS: StationGeoData[] = [
   { id: 'kanzaki_Y22', name: '新横浜', code: 'Y22', lineName: '1. 神埼線', lat: 35.5074, lng: 139.6178 },
   { id: 'kanzaki_Y23', name: '横浜', code: 'Y23', lineName: '1. 神埼線', lat: 35.4658, lng: 139.6223 },
 
-  // 2. 神埼高速線 (Niizaki Kosoku Line / NI) - 全9駅
+  // 2. 神埼高速線 (Nizaki Kosoku Line / NI) - 全9駅
   { id: 'kosoku_NI01', name: '東京', code: 'NI01', lineName: '2. 神埼高速線', lat: 35.6812, lng: 139.7671 },
   { id: 'kosoku_NI02', name: '新橋', code: 'NI02', lineName: '2. 神埼高速線', lat: 35.6664, lng: 139.7583 },
   { id: 'kosoku_NI03', name: '品川', code: 'NI03', lineName: '2. 神埼高速線', lat: 35.6284, lng: 139.7387 },

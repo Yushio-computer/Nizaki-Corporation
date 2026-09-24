@@ -66,7 +66,7 @@ export const NPointModal: React.FC<NPointModalProps> = ({
                   <CreditCard className="w-3.5 h-3.5 text-[#E2D5B7]" />
                 </div>
                 <span className="text-xs font-bold tracking-wider text-slate-200 uppercase">
-                  NIIZAKI Card
+                  NIZAKI Card
                 </span>
               </div>
               <span className="text-[10px] tracking-widest font-mono font-semibold text-[#E2D5B7] bg-[#E2D5B7]/10 px-2.5 py-0.5 rounded-full border border-[#E2D5B7]/25">

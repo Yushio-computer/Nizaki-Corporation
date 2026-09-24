@@ -484,7 +484,7 @@ function handleLineVerificationMessage(replyToken, userId, token) {
   replyToLine(replyToken, [{
     type: 'text',
     text:
-      '🚆神埼鉄道グループ NIIZAKI\n\n' +
+      '🚆神埼鉄道グループ NIZAKI\n\n' +
       '神埼ID新規登録の認証コードです。\n\n' +
       '認証コード: ' + code + '\n\n' +
       'アプリの画面に入力して登録を完了してください。\n' +

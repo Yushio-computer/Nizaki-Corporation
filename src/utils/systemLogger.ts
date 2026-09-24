@@ -1,4 +1,4 @@
-// System Logger & Diagnostics Engine for 神埼鉄道 NIIZAKI App
+// System Logger & Diagnostics Engine for 神埼鉄道 NIZAKI App
 // Version 3.10.0 (Emergency Incident Response & Weather-Aware Disruption Dispatch System)
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'critical';

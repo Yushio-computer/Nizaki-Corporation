@@ -427,7 +427,7 @@ export const MysteryTrainEvent: React.FC<MysteryTrainEventProps> = ({
               </div>
               <div>
                 <span className="text-[10px] tracking-widest text-amber-400/80 uppercase block font-sans">
-                  KANZAKI RAILWAY SPECIAL CASE #9000
+                  NIZAKI RAILWAY SPECIAL CASE #9000
                 </span>
                 <h1 className="text-sm sm:text-base font-bold text-amber-100 tracking-wider">
                   神埼鉄道 特命指令事件

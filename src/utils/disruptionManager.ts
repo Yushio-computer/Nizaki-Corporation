@@ -1,4 +1,4 @@
-// Disruption Dispatcher & Train Delay Manager for 神埼鉄道 NIIZAKI App
+// Disruption Dispatcher & Train Delay Manager for 神埼鉄道 NIZAKI App
 // Version 3.11.0 (Emergency Incident Response, Weather Forecast & Auto-Expiring Operation Alerts)
 
 export type DisruptionStatusType = 'normal' | 'delay' | 'suspended' | 'partially_suspended';

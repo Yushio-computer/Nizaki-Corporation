@@ -66,7 +66,7 @@ export async function registerPasskey(
       publicKey: {
         challenge,
         rp: {
-          name: '神埼鉄道 NIIZAKI App',
+          name: '神埼鉄道 NIZAKI App',
           // hostnameを取得（localhostまたはドメイン）
           id: window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname,
         },
