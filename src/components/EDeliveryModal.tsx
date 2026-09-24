@@ -11,6 +11,8 @@ interface EDeliveryModalProps {
   activeOrder?: ActiveOrder | null;
   isLoggedIn?: boolean;
   onRequireLogin?: (reason: string, onLoggedIn?: () => void) => void;
+  isCouponUsed?: (code: string) => boolean;
+  onCouponUsed?: (code: string) => void;
 }
 
 const getRandomSeat = () => {
@@ -28,6 +30,8 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
   activeOrder,
   isLoggedIn = false,
   onRequireLogin,
+  isCouponUsed,
+  onCouponUsed,
 }) => {
   const [selectedTrain, setSelectedTrain] = useState('特急めぐり 8号 (14:43発 松戸駅)');
   const [carNo, setCarNo] = useState(1);
@@ -86,25 +90,25 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
     const code = couponCodeInput.trim().toUpperCase().replace(/\s+/g, '');
     if (!code) return;
 
+    let coupon: { code: string; label: string; discount: number } | null = null;
     if (code === 'DISH20') {
-      setAppliedDeliveryCoupon({
-        code: 'DISH20',
-        label: '【クリア記念特典】デリバリー1品 20%OFF',
-        discount: 20,
-      });
-      setCouponError(null);
-      setCouponCodeInput('');
+      coupon = { code: 'DISH20', label: '【クリア記念特典】デリバリー1品 20%OFF', discount: 20 };
     } else if (code === 'KZ-EASY-20' || code === 'KZEASY20' || code === 'KZ-EASY-20%' || code === 'KZ-EASY-DELIV' || code === 'KZ-EASY-200' || code === 'KZEASY200') {
-      setAppliedDeliveryCoupon({
-        code: 'KZ-EASY-20',
-        label: '【初級制覇特典】デリバリー1品 20%OFF',
-        discount: 20,
-      });
-      setCouponError(null);
-      setCouponCodeInput('');
-    } else {
-      setCouponError('無効なクーポンコードです。');
+      coupon = { code: 'KZ-EASY-20', label: '【初級制覇特典】デリバリー1品 20%OFF', discount: 20 };
     }
+
+    if (!coupon) {
+      setCouponError('無効なクーポンコードです。');
+      return;
+    }
+    if (isCouponUsed?.(coupon.code)) {
+      setCouponError('このクーポンは既に使用済みです。');
+      return;
+    }
+
+    setAppliedDeliveryCoupon(coupon);
+    setCouponError(null);
+    setCouponCodeInput('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -114,6 +118,16 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
     if (!isLoggedIn && onRequireLogin) {
       onRequireLogin('車内デリバリーのご注文確定には、神埼IDログインが必要です。');
       return;
+    }
+
+    // 適用中クーポンが、確定までの間に使用済みになっていないか再確認(1回限り)
+    if (appliedDeliveryCoupon && isCouponUsed?.(appliedDeliveryCoupon.code)) {
+      setAppliedDeliveryCoupon(null);
+      setCouponError('このクーポンは既に使用済みです。');
+      return;
+    }
+    if (appliedDeliveryCoupon && discountAmount > 0) {
+      onCouponUsed?.(appliedDeliveryCoupon.code);
     }
 
     const newOrder: ActiveOrder = {
@@ -134,6 +148,7 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
       onConfirmOrder(newOrder);
       setIsSuccess(false);
       setCart({});
+      setAppliedDeliveryCoupon(null);
       onClose();
     }, 1500);
   };

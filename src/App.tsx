@@ -176,6 +176,35 @@ export default function App() {
     return { ok: true, message: `${entry.points.toLocaleString()} pt を付与しました。` };
   };
 
+  // デリバリークーポンの使用済み管理(アカウントごとに1回限り)
+  const getUsedDeliveryCouponsKey = (): string | null => {
+    const prefix = getPointStoragePrefix(currentUser?.email);
+    return prefix ? `${prefix}_used_delivery_coupons` : null;
+  };
+
+  const readUsedDeliveryCoupons = (): string[] => {
+    const key = getUsedDeliveryCouponsKey();
+    if (!key) return [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const isDeliveryCouponUsed = (code: string): boolean => readUsedDeliveryCoupons().includes(code);
+
+  const markDeliveryCouponUsed = (code: string) => {
+    const key = getUsedDeliveryCouponsKey();
+    if (!key) return;
+    const used = readUsedDeliveryCoupons();
+    if (used.includes(code)) return;
+    try {
+      localStorage.setItem(key, JSON.stringify([...used, code]));
+    } catch {}
+  };
+
   const handleRequireLogin = (reason: string, onLoggedIn?: () => void) => {
     setLoginReason(reason);
     if (onLoggedIn) {
@@ -497,6 +526,8 @@ export default function App() {
         activeOrder={activeOrder}
         isLoggedIn={isLoggedIn}
         onRequireLogin={handleRequireLogin}
+        isCouponUsed={isDeliveryCouponUsed}
+        onCouponUsed={markDeliveryCouponUsed}
       />
 
       <LoginModal
