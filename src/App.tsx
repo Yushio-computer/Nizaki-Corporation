@@ -19,6 +19,7 @@ import { QRCodeModal } from './components/QRCodeModal';
 import { LoginModal } from './components/LoginModal';
 import { MyPageModal } from './components/MyPageModal';
 import { MOCK_LINES, MOCK_STATIONS, MOCK_EQUIP_ITEMS, MOCK_LIVE_TRAINS } from './data/mockData';
+import { POINT_CODES, normalizePointCode } from './data/pointCodes';
 import { TabType, Station, ActiveOrder, DepartureInfo, EquipItem, PointHistoryItem, UserProfile } from './types';
 
 // Helper to sanitize email for storage key
@@ -142,6 +143,37 @@ export default function App() {
       }
       return newHist;
     });
+  };
+
+  const redeemPointCode = (rawCode: string): { ok: boolean; message: string } => {
+    if (!currentUser || !currentUser.email) {
+      return { ok: false, message: 'コードのご利用には神埼IDログインが必要です。' };
+    }
+    const code = normalizePointCode(rawCode);
+    if (!code) return { ok: false, message: 'コードを入力してください。' };
+
+    const entry = POINT_CODES[code];
+    if (!entry) return { ok: false, message: '無効なコードです。' };
+
+    const prefix = getPointStoragePrefix(currentUser.email);
+    if (!prefix) return { ok: false, message: '無効なコードです。' };
+
+    const storageKey = `${prefix}_redeemed_codes`;
+    let redeemed: string[] = [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      if (Array.isArray(parsed)) redeemed = parsed;
+    } catch {}
+
+    if (redeemed.includes(code)) {
+      return { ok: false, message: 'このコードは既に使用済みです。' };
+    }
+
+    addPoints(entry.points, entry.title, 'coupon');
+    try {
+      localStorage.setItem(storageKey, JSON.stringify([...redeemed, code]));
+    } catch {}
+    return { ok: true, message: `${entry.points.toLocaleString()} pt を付与しました。` };
   };
 
   const handleRequireLogin = (reason: string, onLoggedIn?: () => void) => {
@@ -501,6 +533,7 @@ export default function App() {
         balance={nPointBalance}
         pointHistory={pointHistory}
         currentUser={currentUser}
+        onRedeemCode={redeemPointCode}
       />
 
       <RouteMapModal

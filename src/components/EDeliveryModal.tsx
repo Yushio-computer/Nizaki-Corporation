@@ -94,18 +94,10 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
       });
       setCouponError(null);
       setCouponCodeInput('');
-    } else if (code === 'KZ-MASHIN-30' || code === 'KZMASHIN30') {
+    } else if (code === 'ZANMARU30') {
       setAppliedDeliveryCoupon({
-        code: 'KZ-MASHIN-30',
+        code: 'ZANMARU30',
         label: '【ミステリー制覇特典・斬丸と三つの雅石】デリバリー1品 30%OFF',
-        discount: 30,
-      });
-      setCouponError(null);
-      setCouponCodeInput('');
-    } else if (code === 'KZ-KAITAN-30' || code === 'KZKAITAN30') {
-      setAppliedDeliveryCoupon({
-        code: 'KZ-KAITAN-30',
-        label: '【ミステリー制覇特典・消えた試運転列車の謎】デリバリー1品 30%OFF',
         discount: 30,
       });
       setCouponError(null);
