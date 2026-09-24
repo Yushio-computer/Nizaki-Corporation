@@ -86,19 +86,19 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
     const code = couponCodeInput.trim().toUpperCase().replace(/\s+/g, '');
     if (!code) return;
 
-    if (code === 'DISH20' || code === 'KZ-EASY-20' || code === 'KZEASY20' || code === 'KZ-EASY-20%' || code === 'KZ-EASY-DELIV' || code === 'KZ-EASY-200' || code === 'KZEASY200') {
+    if (code === 'DISH20') {
       setAppliedDeliveryCoupon({
-        code: 'KZ-EASY-20',
-        label: '【初級制覇特典】デリバリー1品 20%OFF',
+        code: 'DISH20',
+        label: '【クリア記念特典】デリバリー1品 20%OFF',
         discount: 20,
       });
       setCouponError(null);
       setCouponCodeInput('');
-    } else if (code === 'ZANMARU30') {
+    } else if (code === 'KZ-EASY-20' || code === 'KZEASY20' || code === 'KZ-EASY-20%' || code === 'KZ-EASY-DELIV' || code === 'KZ-EASY-200' || code === 'KZEASY200') {
       setAppliedDeliveryCoupon({
-        code: 'ZANMARU30',
-        label: '【ミステリー制覇特典・斬丸と三つの雅石】デリバリー1品 30%OFF',
-        discount: 30,
+        code: 'KZ-EASY-20',
+        label: '【初級制覇特典】デリバリー1品 20%OFF',
+        discount: 20,
       });
       setCouponError(null);
       setCouponCodeInput('');
