@@ -86,7 +86,7 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
     const code = couponCodeInput.trim().toUpperCase().replace(/\s+/g, '');
     if (!code) return;
 
-    if (code === 'KZ-EASY-20' || code === 'KZEASY20' || code === 'KZ-EASY-20%' || code === 'KZ-EASY-DELIV' || code === 'KZ-EASY-200' || code === 'KZEASY200') {
+    if (code === 'DISH20' || code === 'KZ-EASY-20' || code === 'KZEASY20' || code === 'KZ-EASY-20%' || code === 'KZ-EASY-DELIV' || code === 'KZ-EASY-200' || code === 'KZEASY200') {
       setAppliedDeliveryCoupon({
         code: 'KZ-EASY-20',
         label: '【初級制覇特典】デリバリー1品 20%OFF',
