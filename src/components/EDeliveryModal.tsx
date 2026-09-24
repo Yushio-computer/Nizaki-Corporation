@@ -71,12 +71,12 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
 
   const rawTotalPrice = selectedItems.reduce((sum, ci) => sum + ci.item.price * ci.quantity, 0);
 
-  // 1品20%オフ割引計算 (最も高額な1品を20%割引)
+  // 1品割引計算 (最も高額な1品をクーポンの割引率で割引)
   let discountAmount = 0;
   if (appliedDeliveryCoupon && selectedItems.length > 0) {
     const highestPricedItem = [...selectedItems].sort((a, b) => b.item.price - a.item.price)[0];
     if (highestPricedItem) {
-      discountAmount = Math.ceil(highestPricedItem.item.price * 0.2);
+      discountAmount = Math.ceil(highestPricedItem.item.price * (appliedDeliveryCoupon.discount / 100));
     }
   }
 
@@ -86,7 +86,7 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
     const code = couponCodeInput.trim().toUpperCase().replace(/\s+/g, '');
     if (!code) return;
 
-    if (code === 'KZ-EASY-20' || code === 'KZEASY20' || code === 'KZ-EASY-20%' || code === 'KZ-EASY-DELIV' || code === 'KZ-EASY-200' || code === 'KZEASY200') {
+    if (code === 'DISH20' || code === 'KZ-EASY-20' || code === 'KZEASY20' || code === 'KZ-EASY-20%' || code === 'KZ-EASY-DELIV' || code === 'KZ-EASY-200' || code === 'KZEASY200') {
       setAppliedDeliveryCoupon({
         code: 'KZ-EASY-20',
         label: '【初級制覇特典】デリバリー1品 20%OFF',
@@ -94,8 +94,16 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
       });
       setCouponError(null);
       setCouponCodeInput('');
+    } else if (code === 'ZANMARU30') {
+      setAppliedDeliveryCoupon({
+        code: 'ZANMARU30',
+        label: '【ミステリー制覇特典・斬丸と三つの雅石】デリバリー1品 30%OFF',
+        discount: 30,
+      });
+      setCouponError(null);
+      setCouponCodeInput('');
     } else {
-      setCouponError('無効なクーポンコードです。（初級制覇クーポン: KZ-EASY-20）');
+      setCouponError('無効なクーポンコードです。');
     }
   };
 
@@ -384,7 +392,7 @@ export const EDeliveryModal: React.FC<EDeliveryModalProps> = ({
                   </div>
                   {appliedDeliveryCoupon && (
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md">
-                      20%OFF適用中
+                      {appliedDeliveryCoupon.discount}%OFF適用中
                     </span>
                   )}
                 </div>

@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Award, CreditCard, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Award, CreditCard, Sparkles, Gift } from 'lucide-react';
 import { PointHistoryItem, UserProfile } from '../types';
 
 interface NPointModalProps {
@@ -8,6 +8,7 @@ interface NPointModalProps {
   balance: number;
   pointHistory?: PointHistoryItem[];
   currentUser?: UserProfile | null;
+  onRedeemCode?: (code: string) => { ok: boolean; message: string };
 }
 
 export const NPointModal: React.FC<NPointModalProps> = ({
@@ -16,8 +17,20 @@ export const NPointModal: React.FC<NPointModalProps> = ({
   balance,
   pointHistory = [],
   currentUser = null,
+  onRedeemCode,
 }) => {
+  const [redeemInput, setRedeemInput] = useState('');
+  const [redeemResult, setRedeemResult] = useState<{ ok: boolean; message: string } | null>(null);
+
   if (!isOpen) return null;
+
+  const handleRedeem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onRedeemCode) return;
+    const result = onRedeemCode(redeemInput);
+    setRedeemResult(result);
+    if (result.ok) setRedeemInput('');
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
@@ -108,6 +121,39 @@ export const NPointModal: React.FC<NPointModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* コードでポイントを受け取る */}
+          {onRedeemCode && (
+            <form onSubmit={handleRedeem} className="bg-[#F9F8FD] p-4 rounded-2xl border border-[#E6E2EE] space-y-2">
+              <div className="font-extrabold text-[#221C35] flex items-center gap-1.5 text-xs">
+                <Gift className="w-3.5 h-3.5 text-[#5B21B6]" />
+                <span>コードでポイントを受け取る</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={redeemInput}
+                  onChange={(e) => {
+                    setRedeemInput(e.target.value);
+                    if (redeemResult) setRedeemResult(null);
+                  }}
+                  placeholder="ポイントコードを入力"
+                  className="flex-1 bg-white border border-[#D1C9E3] rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-[#221C35] focus:outline-none focus:border-[#5B21B6] placeholder:text-gray-400"
+                />
+                <button
+                  type="submit"
+                  className="bg-[#5B21B6] hover:bg-[#4C1D95] text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs"
+                >
+                  受け取る
+                </button>
+              </div>
+              {redeemResult && (
+                <div className={`text-[11px] font-bold px-1 ${redeemResult.ok ? 'text-emerald-700' : 'text-rose-600'}`}>
+                  {redeemResult.message}
+                </div>
+              )}
+            </form>
+          )}
 
           {/* Point History & Benefits */}
           <div className="bg-[#F9F8FD] p-4 rounded-2xl border border-[#E6E2EE] space-y-3">
