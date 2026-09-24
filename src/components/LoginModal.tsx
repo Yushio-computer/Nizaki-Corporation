@@ -72,8 +72,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const handleQuickLogin = (rank: 'レギュラー' | 'ゴールド' | 'プレミアム' = 'ゴールド') => {
     const demoUser: UserProfile = {
       memberId: 'KZ-88219',
-      name: 'kanzaki.demo',
-      email: 'kanzaki.demo@example.com',
+      name: 'nizaki.demo',
+      email: 'nizaki.demo@example.com',
       rank,
       joinDate: '2024-04-01',
     };
@@ -234,7 +234,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
           <div className="flex items-center gap-2 mb-1.5">
             <span className="bg-amber-400 text-[#221C35] text-[10px] font-black px-2 py-0.5 rounded shadow-xs tracking-wider">
-              NIIZAKI ID
+              NIZAKI ID
             </span>
             <span className="text-white/80 text-xs font-medium">神埼鉄道 公式会員サービス</span>
           </div>
@@ -537,7 +537,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
         {/* フッター規約 */}
         <div className="p-3 bg-[#F8F7FC] border-t border-[#E5E2EE] text-center text-[10px] text-[#857D99]">
-          神埼鉄道 NIIZAKI ID 会員規約およびプライバシーポリシーに同意して利用します。
+          神埼鉄道 NIZAKI ID 会員規約およびプライバシーポリシーに同意して利用します。
         </div>
       </div>
     </div>
